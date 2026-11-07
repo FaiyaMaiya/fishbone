@@ -178,7 +178,7 @@ async def generate_bone_ai(
     name = name.strip()
     role = role.strip()
     story = story.strip()
-    if not name or len(name) > 100 or len(role) > 200 or len(story) > 2000:
+    if not name or len(name) > 100 or len(role) > 200 or not story or len(story) > 2000:
         raise HTTPException(status_code=400, detail="Character details are invalid.")
     if face_image.content_type != "image/jpeg":
         raise HTTPException(status_code=415, detail="The face crop must be a JPEG image.")
@@ -193,9 +193,12 @@ async def generate_bone_ai(
         raise HTTPException(status_code=400, detail="The face crop is not a valid JPEG image.")
 
     prompt = (
-        f"Create a short cinematic, natural-looking video based on this person in the reference image. "
-        f"Preserve their recognizable face and clothing. Character: {name}. "
-        f"Role: {role or 'person'}. Story: {story or 'A short personal story.'}"
+        "Create a short cinematic video showing the events in this character's story, which happened "
+        "before the reference footage. Use the reference image as the character's visual identity and "
+        "preserve their recognizable appearance throughout the video. Visualize the story's key events "
+        "in chronological order as a coherent scene; do not replace the story with unrelated events or "
+        "add captions, titles, or logos. "
+        f"Character: {name}. Role: {role or 'person'}. Bone story: {story}"
     )
     try:
         client = InferenceClient(

@@ -13,13 +13,13 @@ uvicorn main:app --host 127.0.0.1 --port 8000
 
 ## Optional Hugging Face video generation
 
-The default Bone Movie remains a local highlight made from detected moments. To enable the optional image-to-video generation locally, add a Hugging Face token with Inference Providers permission to `backend/.env`:
+When Hugging Face generation is unavailable, the frontend can create a local highlight from detected moments. To enable image-to-video generation locally, add a Hugging Face token with Inference Providers permission to `backend/.env`:
 
 ```env
 HF_TOKEN=your_hugging_face_token
 ```
 
-Keep the token private and out of source control. The configured Wan image-to-video model uses Hugging Face's `fal-ai` provider. Hugging Face Inference Providers are not free for free-tier accounts; check current provider pricing before enabling generation. Every attempted generation asks for confirmation because it sends a cropped face image and that character's name, role, and story to Hugging Face and its inference provider, and may incur charges. The original source video is not sent. If the provider is unavailable or generation fails, FishBone falls back to the existing local highlight.
+Keep the token private and out of source control. The configured Wan image-to-video model uses Hugging Face's `fal-ai` provider to generate a video that visualizes the character's Bone story in chronological order, using the detected face crop as its identity reference. Hugging Face Inference Providers are not free for free-tier accounts; check current provider pricing before enabling generation. Every attempt asks for confirmation because it sends a cropped face image and that character's name, role, and story to Hugging Face and its inference provider, and may incur charges. The original source video is not sent. A provider failure is reported; it does not create a local highlight presented as an AI movie. Generated movies are attached to characters for playback in the current creator session and are persisted for viewers when the creator publishes the universe.
 
 The billable generation endpoint only accepts loopback requests by default. Do not enable remote access with `FISHBONE_HF_ALLOW_REMOTE` on a public backend unless you have added authentication, rate limiting, and spending controls.
 

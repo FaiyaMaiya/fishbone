@@ -124,7 +124,7 @@ button[onclick="clearChars()"]{border-color:var(--line)!important;color:var(--mu
 .selected-face-preview[hidden]{display:none}
 .selected-face-preview img{width:88px;height:88px;object-fit:cover;border-radius:8px;background:#050505}
 .selected-face-preview p{font-size:13px;font-weight:700}
-.top button,.controls button,.creator-actions button,.user-bone-overlay button,
+.top button,.controls button,.creator-actions button,.user-bone-overlay button,#createStoryVideoBtn,
 button[onclick="saveCharacter()"],button[onclick="blendBack()"]{
   background:var(--accent)!important;
   color:#101010!important;
@@ -134,7 +134,7 @@ button[onclick="saveCharacter()"],button[onclick="blendBack()"]{
   font-weight:700!important;
   transition:background .15s ease,transform .15s ease,border-color .15s ease;
 }
-.top button:hover,.controls button:hover,.creator-actions button:hover,.user-bone-overlay button:hover,
+.top button:hover,.controls button:hover,.creator-actions button:hover,.user-bone-overlay button:hover,#createStoryVideoBtn:hover,
 button[onclick="saveCharacter()"]:hover,button[onclick="blendBack()"]:hover{
   background:var(--accent-hover)!important;
 }
@@ -333,11 +333,9 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
       <div id="boneAvatar" style="width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;background:#ff6b9d;border:4px solid #fff">?</div>
       <h2 id="boneName" style="margin:12px 0 6px">Unknown Person</h2>
       <p id="boneStory" style="max-width:500px;line-height:1.6;color:#cdeef5"></p>
+      <video id="creatorBoneVideo" class="story-video" controls playsinline style="display:none;margin:8px 0"></video>
+      <p id="creatorBoneVideoStatus" role="status" style="font-size:12px"></p>
       <p id="boneMeta" style="margin-top:10px;color:#5ff2e0;font-weight:700;font-size:12px"></p>
-      <button id="createStoryVideoBtn" class="creator-only" onclick="createCharacterStoryVideo(currentChar)" style="margin-top:12px;background:#00e5c7;border:none;padding:10px 18px;border-radius:22px;font-weight:900;cursor:pointer"><svg class="icon"><use href="#icon-film"/></svg> Generate Bone Movie</button>
-      <p id="storyVideoStatus" style="margin-top:8px;max-width:560px;font-size:11px;line-height:1.5;color:#cdeef5">Uses this video's moments where the face was detected and overlays the saved character details. This creates a silent highlight, not a semantic action analysis.</p>
-      <video id="storyVideo" class="story-video" controls playsinline style="display:none;margin-top:8px"></video>
-      <a id="storyDownload" class="story-download creator-only" style="display:none;margin-top:6px" download><svg class="icon"><use href="#icon-download"/></svg> Download Bone Movie</a>
       <button onclick="blendBack()" style="margin-top:16px;background:#ffcc00;border:none;padding:12px 22px;border-radius:25px;font-weight:900;cursor:pointer">Return to main video</button>
     </div>
     <div class="controls" id="controls" style="display:none">
@@ -370,11 +368,15 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
         <img id="selectedFaceImage" alt="Selected person's face">
         <p id="selectedFaceName"></p>
       </div>
-      <input id="fName" placeholder="Name — e.g. Mama Lina">
-      <input id="fRole" placeholder="Role — e.g. Market Seller, Lae">
+      <input id="fName" maxlength="100" placeholder="Name — e.g. Mama Lina">
+      <input id="fRole" maxlength="200" placeholder="Role — e.g. Market Seller, Lae">
       <select id="fType"><option value="face">Type: Face</option><option value="body">Type: Full Body</option></select>
-      <textarea id="fStory" placeholder="Their Bone story — what happened before this video?"></textarea>
+      <textarea id="fStory" maxlength="2000" placeholder="Their Bone story — what happened before this video?"></textarea>
       <input id="fColor" type="color" value="#bdbdbd" style="height:36px">
+      <button id="createStoryVideoBtn" class="creator-only" type="button" onclick="createCharacterStoryVideo(currentChar)" style="width:100%;margin-bottom:8px"><svg class="icon"><use href="#icon-film"/></svg> Generate Bone Movie (AI)</button>
+      <p id="storyVideoStatus" role="status" style="margin:0 0 10px;font-size:12px">Creates a movie from your Bone story. With Hugging Face enabled, the approved face crop and story are sent to its provider and may incur charges.</p>
+      <video id="storyVideo" class="story-video" controls playsinline style="display:none;margin:0 0 8px"></video>
+      <a id="storyDownload" class="story-download creator-only" style="display:none;margin:0 0 10px" download><svg class="icon"><use href="#icon-download"/></svg> Download Bone Movie</a>
       <button onclick="saveCharacter()" style="width:100%;background:#00e5c7;border:none;padding:11px;border-radius:10px;font-weight:900;cursor:pointer"><svg class="icon"><use href="#icon-save"/></svg> Save character story</button>
       <button onclick="clearChars()" style="width:100%;background:transparent;border:1px solid #ff3b30;color:#ff3b30;padding:9px;border-radius:10px;margin-top:8px;cursor:pointer"><svg class="icon"><use href="#icon-trash"/></svg> Clear all</button>
       <div class="creator-actions">
@@ -408,7 +410,7 @@ try{
   console.error('Could not restore saved FishBone characters; starting with an empty list.',error);
 }
 let aiOn=true, aiReady=false, faceIdentityReady=false, aiModelLoadPromise=null, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
-let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), universeDotNodes=new Map(), activeDetectionIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
+let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), characterBoneMovieDetails=new Map(), universeDotNodes=new Map(), activeDetectionIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, creatorBoneMovieUrl=null, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
 let video=document.getElementById('video');
 const API_BASE=(window.FISHBONE_API_BASE||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'http://localhost:8000':'https://fishbone-backend.onrender.com')).replace(/\/$/,'');
 const FACE_MATCH_THRESHOLD=0.6;
@@ -424,6 +426,8 @@ function escapeHtml(value){
 }
 function apiUrl(path){return API_BASE+path;}
 function setCreatorMode(enabled){
+  clearCreatorBoneMovie();
+  document.getElementById('boneOverlay').classList.remove('show');
   if(enabled){
     const shouldResumePreview=Boolean(publicShare&&publicSourceWasPlaying);
     document.body.classList.remove('public-view','preview-view');
@@ -489,10 +493,15 @@ function resetPeopleForVideo(){
   document.getElementById('fName').value='';
   document.getElementById('fRole').value='';
   document.getElementById('fStory').value='';
+  document.getElementById('storyVideoStatus').innerText=hfGenerationAvailable
+    ?'Hugging Face AI is available. Generation requires confirmation and may incur charges.'
+    :'Hugging Face AI is unavailable from this connection. This creates a local highlight from detected video moments.';
   document.getElementById('selectedFacePreview').hidden=true;
   document.getElementById('selectedFaceImage').removeAttribute('src');
   characterBoneMovies.clear();
+  characterBoneMovieDetails.clear();
   lastGeneratedCharacterId=null;
+  clearCreatorBoneMovie();
   sourceFile=null;
   clearStoryVideo();
   if(teaserVideoUrl) URL.revokeObjectURL(teaserVideoUrl);
@@ -511,7 +520,9 @@ function clearStoryVideo(){
   storyVideo.load();
   storyVideo.style.display='none';
   document.getElementById('storyDownload').style.display='none';
-  document.getElementById('storyVideoStatus').innerText='Uses this video’s detected face appearances and saved character details to create a silent highlight. It does not identify specific actions.';
+  document.getElementById('storyVideoStatus').innerText=hfGenerationAvailable
+    ?'Hugging Face AI is available. Generation requires confirmation and may incur charges.'
+    :'Hugging Face AI is unavailable from this connection. This creates a local highlight from detected video moments.';
 }
 function recordCharacterMoment(id,time,x,y,w,h){
   if(!Number.isFinite(time)) return;
@@ -555,6 +566,15 @@ async function checkGenerationConfig(){
   }catch(error){
     hfGenerationAvailable=false;
     console.warn('Optional Hugging Face generation is unavailable',error);
+  }
+  const button=document.getElementById('createStoryVideoBtn');
+  const status=document.getElementById('storyVideoStatus');
+  if(hfGenerationAvailable){
+    button.innerHTML='<svg class="icon"><use href="#icon-film"/></svg> Generate AI Bone Movie';
+    status.innerText='Hugging Face AI is available. Generation requires confirmation and may incur charges.';
+  }else{
+    button.innerHTML='<svg class="icon"><use href="#icon-film"/></svg> Create Local Bone Movie';
+    status.innerText='Hugging Face AI is unavailable from this connection. This creates a local highlight from detected video moments.';
   }
 }
 
@@ -1172,7 +1192,11 @@ function renderChars(){
     const name=escapeHtml(c.name);
     const role=escapeHtml(c.role||'');
     const color=typeof c.color==='string'&&/^#[0-9a-f]{6}$/i.test(c.color)?c.color:'#bdbdbd';
-    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · ${c.type==='body'?'Full body':'Face'} · View story</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span></div>`;
+    const movieSource=characterBoneMovieDetails.get(c.id)?.source;
+    const movieLabel=characterBoneMovies.has(c.id)
+      ?` · ${movieSource==='ai'?'AI Bone Movie':'Local Bone Movie'} ready`
+      :'';
+    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · ${c.type==='body'?'Full body':'Face'} · View story${movieLabel}</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span></div>`;
   }).join('');
 }
 
@@ -1230,6 +1254,14 @@ function selectDetectedPerson(id,event){
   document.getElementById('fType').value=character.type;
   document.getElementById('formTitle').innerText=character.isUnknown?'Name this person':`Edit ${character.name}`;
   showSelectedFace(character);
+  const existingMovie=characterBoneMovies.get(id);
+  if(existingMovie){
+    clearStoryVideo();
+    const extension=showCharacterStoryVideo(id,existingMovie,character);
+    document.getElementById('storyVideoStatus').innerText=`Saved Bone Movie ready (${extension.toUpperCase()}).`;
+  }else{
+    clearStoryVideo();
+  }
   renderChars();
   document.getElementById('personDetailsCard').scrollIntoView({behavior:'smooth',block:'center'});
 }
@@ -1238,17 +1270,45 @@ function saveCharacter(){
   let name=document.getElementById('fName').value.trim();
   if(!editingId){ alert('Click a face box first to select that person'); return; }
   let c=chars.find(ch=>ch.id===editingId); if(!c) return;
-  c.name=name||c.name; c.role=document.getElementById('fRole').value; c.story=document.getElementById('fStory').value; c.color=document.getElementById('fColor').value; c.type=document.getElementById('fType').value; c.price=0; c.isUnknown=false;
-  characterBoneMovies.delete(c.id);
+  const updatedCharacter={
+    name:name||c.name,
+    role:document.getElementById('fRole').value.trim(),
+    story:document.getElementById('fStory').value.trim(),
+    color:document.getElementById('fColor').value,
+    type:document.getElementById('fType').value
+  };
+  const movieDetails=characterBoneMovieDetails.get(c.id);
+  const movieMatchesCharacter=movieDetails&&Object.keys(updatedCharacter).every(key=>movieDetails[key]===updatedCharacter[key]);
+  Object.assign(c,updatedCharacter,{price:0,isUnknown:false});
+  if(!movieMatchesCharacter){
+    characterBoneMovies.delete(c.id);
+    characterBoneMovieDetails.delete(c.id);
+    if(movieDetails){
+      clearStoryVideo();
+      clearCreatorBoneMovie();
+      document.getElementById('storyVideoStatus').innerText='Character details changed. Generate a new Bone Movie to match the updated story.';
+    }
+  }
   saveToStorage(); renderChars();
   document.getElementById('formTitle').innerText='Saved '+c.name;
   document.getElementById('selectedFaceName').innerText=c.name;
 }
 
-function enterBone(id, e){
+function clearCreatorBoneMovie(){
+  const player=document.getElementById('creatorBoneVideo');
+  player.pause();
+  player.removeAttribute('src');
+  player.load();
+  player.style.display='none';
+  if(creatorBoneMovieUrl) URL.revokeObjectURL(creatorBoneMovieUrl);
+  creatorBoneMovieUrl=null;
+}
+
+async function enterBone(id, e){
   if(e) e.stopPropagation();
   let c=chars.find(ch=>ch.id===id); if(!c) return;
   clearStoryVideo();
+  clearCreatorBoneMovie();
   currentChar=id; mode='bone'; savedTime=video.currentTime||0;
   video.pause();
   document.getElementById('boneOverlay').classList.add('show');
@@ -1256,6 +1316,27 @@ function enterBone(id, e){
   document.getElementById('boneAvatar').style.background=c.color;
   document.getElementById('boneName').innerText=c.isUnknown? 'Who is this? — '+c.name : c.name+' — Story Bone';
   document.getElementById('boneStory').innerText=c.story || 'No Bone story yet. This person was detected by AI. Add their story below and Save — then next time anyone clicks them, they will see it.';
+  const movie=characterBoneMovies.get(id);
+  const movieSource=characterBoneMovieDetails.get(id)?.source;
+  const moviePlayer=document.getElementById('creatorBoneVideo');
+  const movieStatus=document.getElementById('creatorBoneVideoStatus');
+  if(movie){
+    creatorBoneMovieUrl=URL.createObjectURL(movie);
+    moviePlayer.src=creatorBoneMovieUrl;
+    moviePlayer.style.display='block';
+    movieStatus.innerText=movieSource==='ai'
+      ?'AI Bone Movie generated from this character’s story.'
+      :'Local highlight generated from this character’s detected moments.';
+    try{await moviePlayer.play();}
+    catch(error){
+      movieStatus.innerText=error.name==='NotAllowedError'
+        ?'Press play to watch this character’s Bone Movie.'
+        :'The Bone Movie could not start. Use the video controls to retry.';
+      console.warn('Creator Bone Movie playback failed',error);
+    }
+  }else{
+    movieStatus.innerText='No Bone Movie has been generated for this character yet.';
+  }
   document.getElementById('boneMeta').innerText=(c.role||'')+' • '+c.type+' • Branched at Main '+formatTime(savedTime)+' • Will blend back to same second';
   document.getElementById('modeLabel').innerText='● STORY BONE — '+c.name;
   document.getElementById('modeLabel').className='label bone';
@@ -1331,7 +1412,9 @@ async function captureFaceCrop(moment){
     const stageWidth=stage.clientWidth,stageHeight=stage.clientHeight;
     const videoWidth=video.videoWidth,videoHeight=video.videoHeight;
     if(!stageWidth||!stageHeight||!videoWidth||!videoHeight) throw new Error('The face crop could not be calculated.');
-    const scale=Math.max(stageWidth/videoWidth,stageHeight/videoHeight);
+    const scale=getComputedStyle(video).objectFit==='contain'
+      ?Math.min(stageWidth/videoWidth,stageHeight/videoHeight)
+      :Math.max(stageWidth/videoWidth,stageHeight/videoHeight);
     const offsetX=(stageWidth-videoWidth*scale)/2;
     const offsetY=(stageHeight-videoHeight*scale)/2;
     const centerX=(moment.x/100*stageWidth-offsetX)/scale;
@@ -1362,20 +1445,29 @@ async function captureFaceCrop(moment){
   }
 }
 
-function showCharacterStoryVideo(id,blob){
+function showCharacterStoryVideo(id,blob,characterDetails=chars.find(item=>item.id===id),source='local'){
   characterBoneMovies.set(id,blob);
+  characterBoneMovieDetails.set(id,{
+    name:characterDetails?.name||'',
+    role:characterDetails?.role||'',
+    story:characterDetails?.story||'',
+    color:characterDetails?.color||'#bdbdbd',
+    type:characterDetails?.type||'face',
+    source
+  });
   lastGeneratedCharacterId=id;
   storyVideoUrl=URL.createObjectURL(blob);
   const storyVideo=document.getElementById('storyVideo');
   storyVideo.src=storyVideoUrl;
   storyVideo.style.display='block';
   const download=document.getElementById('storyDownload');
-  const character=chars.find(item=>item.id===id);
+  const character=characterDetails;
   const safeName=String(character?.name||'character').replace(/[^a-z0-9_-]+/gi,'-').replace(/^-|-$/g,'')||'character';
   const extension=blob.type.toLowerCase().startsWith('video/mp4')?'mp4':'webm';
   download.href=storyVideoUrl;
   download.download=`FishBone-${safeName}.${extension}`;
   download.style.display='inline-block';
+  renderChars();
   return extension;
 }
 
@@ -1384,7 +1476,29 @@ async function createCharacterStoryVideo(id){
   const moments=characterMoments.get(id)||[];
   const button=document.getElementById('createStoryVideoBtn');
   const status=document.getElementById('storyVideoStatus');
-  if(!character) return;
+  if(!character){
+    status.innerText='Select a detected person before generating a Bone Movie.';
+    return;
+  }
+  const movieCharacter={
+    ...character,
+    name:document.getElementById('fName').value.trim(),
+    role:document.getElementById('fRole').value.trim(),
+    story:document.getElementById('fStory').value.trim(),
+    color:document.getElementById('fColor').value,
+    type:document.getElementById('fType').value,
+    isUnknown:false
+  };
+  if(!movieCharacter.name){
+    status.innerText='Enter this person’s name before generating their Bone Movie.';
+    document.getElementById('fName').focus();
+    return;
+  }
+  if(!movieCharacter.story){
+    status.innerText='Write what happened before this video in the Bone story field first.';
+    document.getElementById('fStory').focus();
+    return;
+  }
   if(moments.length===0){
     status.innerText='No detected moments are available yet. Play the video with AI detection enabled, then try again.';
     return;
@@ -1410,9 +1524,12 @@ async function createCharacterStoryVideo(id){
     return;
   }
 
+  let localFallbackReason=hfGenerationAvailable?'Hugging Face generation was not used.':'Hugging Face generation is unavailable.';
+  clearStoryVideo();
+
   if(hfGenerationAvailable){
     const approved=window.confirm(
-      'Optional Hugging Face video generation can incur charges. If you continue, a cropped face image and this character’s name, role and story will be sent to Hugging Face and its fal-ai inference provider. The original video is not uploaded. Continue? Cancel to use the local highlight.'
+      'Hugging Face video generation may incur charges. If you continue, a cropped face image and the name, role and Bone story you entered will be sent to Hugging Face and its fal-ai inference provider. The original video is not uploaded. Continue? Cancel to stop without generating a movie.'
     );
     if(approved){
       const generation=detectionGeneration;
@@ -1426,10 +1543,10 @@ async function createCharacterStoryVideo(id){
         const formData=new FormData();
         formData.append('face_image',faceCrop,'face.jpg');
         formData.append('char_id',character.id);
-        formData.append('name',character.name);
-        formData.append('role',character.role||'');
-        formData.append('story',character.story||'');
-        status.innerText='Generating the optional AI Bone Movie. This can take a few minutes...';
+        formData.append('name',movieCharacter.name);
+        formData.append('role',movieCharacter.role);
+        formData.append('story',movieCharacter.story);
+        status.innerText='Generating a new AI Bone Movie from the character’s story. This can take a few minutes...';
         const controller=new AbortController();
         const timeout=setTimeout(()=>controller.abort(),190000);
         let response;
@@ -1455,12 +1572,13 @@ async function createCharacterStoryVideo(id){
         const blob=await response.blob();
         if(!blob.size||!blob.type.startsWith('video/')) throw new Error('The AI provider returned an unsupported video.');
         clearStoryVideo();
-        const extension=showCharacterStoryVideo(id,blob);
-        status.innerText=`AI Bone Movie ready (${extension.toUpperCase()}). The generated video is based on the approved face crop and character story.`;
+        const extension=showCharacterStoryVideo(id,blob,movieCharacter,'ai');
+        status.innerText=`AI Bone Movie ready (${extension.toUpperCase()}). It was generated using the face reference and Bone story you entered.`;
         return;
       }catch(error){
-        console.warn('Optional Hugging Face video generation failed; using local highlight',error);
-        status.innerText=`Hugging Face generation failed (${error.message||'provider unavailable'}); creating the local highlight instead.`;
+        console.error('Hugging Face Bone Movie generation failed',error);
+        status.innerText=`Hugging Face could not generate this Bone Movie: ${error.message||'provider unavailable'}. No local substitute was created.`;
+        return;
       }finally{
         if(Number.isFinite(originalTime)&&generation===detectionGeneration&&video.readyState>=1){
           try{await waitForSeek(Math.min(originalTime,video.duration));}
@@ -1470,7 +1588,8 @@ async function createCharacterStoryVideo(id){
         button.style.opacity='1';
       }
     }else{
-      status.innerText='External AI generation was not approved; creating the local highlight.';
+      status.innerText='Hugging Face generation was not approved. No movie was created.';
+      return;
     }
   }
 
@@ -1484,7 +1603,7 @@ async function createCharacterStoryVideo(id){
     return;
   }
 
-  const originalTime=savedTime;
+  const originalTime=video.currentTime;
   const generation=detectionGeneration;
   const canvas=document.createElement('canvas');
   canvas.width=960; canvas.height=540;
@@ -1499,7 +1618,7 @@ async function createCharacterStoryVideo(id){
   let stream=null, recorder=null, recordingError=null, drawFrameId=0, currentMomentIndex=0;
   const chunks=[];
   const draw=()=>{
-    try{drawStoryFrame(context,canvas.width,canvas.height,character,currentMomentIndex,clips.length,activitySummary);}
+    try{drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,currentMomentIndex,clips.length,activitySummary);}
     catch(error){recordingError=error;return;}
     drawFrameId=requestAnimationFrame(draw);
   };
@@ -1511,7 +1630,7 @@ async function createCharacterStoryVideo(id){
     status.innerText=`Preparing ${clips.length} detected moment(s)...`;
     video.pause();
     await waitForSeek(clips[0].start);
-    drawStoryFrame(context,canvas.width,canvas.height,character,0,clips.length,activitySummary);
+    drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,0,clips.length,activitySummary);
     stream=canvas.captureStream(24);
     recorder=new MediaRecorder(stream,{mimeType});
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
@@ -1533,8 +1652,8 @@ async function createCharacterStoryVideo(id){
     await stopRecording;
     if(!chunks.length) throw new Error('The browser did not produce a video recording.');
     const blob=new Blob(chunks,{type:recorder.mimeType||mimeType});
-    const extension=showCharacterStoryVideo(id,blob);
-    status.innerText=`Character highlight ready (${clips.length} detected moments, ${extension.toUpperCase()}). It uses the original footage and saved details; movement is described only as visible position changes.`;
+    const extension=showCharacterStoryVideo(id,blob,movieCharacter);
+    status.innerText=`Character highlight ready (${clips.length} detected moments, ${extension.toUpperCase()}). ${localFallbackReason} This uses the original footage and the Bone story you entered.`;
   }catch(error){
     console.error('Character story video creation failed',error);
     status.innerText=`Could not create the video: ${error.message||'recording failed'}. For online video, make sure the video host permits canvas access.`;
@@ -1729,6 +1848,7 @@ async function exportTikTokTeaser(){
 
 function blendBack(){
   if(mode!=='bone') return;
+  clearCreatorBoneMovie();
   document.getElementById('modeLabel').innerText='🔄 BLENDING BACK...';
   document.getElementById('modeLabel').className='label blend';
   document.getElementById('boneOverlay').classList.remove('show');
@@ -1824,6 +1944,8 @@ function clearChars(){
   characterMoments.clear();
   pendingDetectionCandidates=[];
   characterBoneMovies.clear();
+  characterBoneMovieDetails.clear();
+  clearCreatorBoneMovie();
   lastGeneratedCharacterId=null;
   currentChar=null;
   editingId=null;
