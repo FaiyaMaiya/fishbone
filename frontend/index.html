@@ -33,8 +33,6 @@ body{background:#020a12;color:#fff}
 .face-box .tag{position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#00e5c7;color:#000;font-size:10px;font-weight:900;padding:4px 8px;border-radius:10px;white-space:nowrap}
 .face-box.unknown{border-color:#ffcc00;border-style:dashed}
 .face-box.unknown .tag{background:#ffcc00}
-.face-box.body{border-color:#ff6b9d;border-radius:20px}
-.face-box.body .tag{background:#ff6b9d;color:#fff}
 @media(prefers-reduced-motion:reduce){.face-box{transition:opacity .15s,background-color .15s,transform .15s;will-change:auto}}
 .controls{position:absolute;bottom:0;left:0;right:0;padding:12px;z-index:25;display:flex;gap:10px;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,.9));flex-wrap:wrap}
 .controls button{background:#00e5c7;border:none;padding:8px 14px;border-radius:20px;font-weight:900;cursor:pointer;color:#000}
@@ -113,8 +111,6 @@ body{background:var(--page);color:var(--text)}
 .face-box:hover,.face-box:focus-visible,.face-box.revealed{border-color:var(--warning);background:#bdbdbd20}
 .face-box.unknown{border-color:var(--warning)}
 .face-box.unknown .tag{background:var(--warning);color:#111}
-.face-box.body{border-color:#777}
-.face-box.body .tag{background:#777}
 .empty #modelStatus,#aiStatus{color:var(--muted)!important}
 #userBonePrice,#boneMeta,#storyVideoStatus,#unlockStatus{color:var(--muted)!important}
 #faceCount{background:var(--surface-raised)!important;color:var(--text)!important}
@@ -317,7 +313,7 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
   <div class="stage" id="stage">
     <video id="video" playsinline crossorigin="anonymous"></video>
     <div class="empty" id="emptyState">
-      <div style="color:var(--accent)"><svg class="icon icon-lg"><use href="#icon-film"/></svg></div><h2>AI face &amp; body detection</h2>
+      <div style="color:var(--accent)"><svg class="icon icon-lg"><use href="#icon-film"/></svg></div><h2>AI face detection</h2>
       <p>Upload a video to create a character universe.</p>
       <label class="creator-only" style="background:#00e5c7;color:#000;padding:12px 20px;border-radius:25px;font-weight:900;cursor:pointer"><svg class="icon"><use href="#icon-upload"/></svg> Choose video <input type="file" id="videoInput2" accept="video/*" style="display:none"></label>
       <p class="creator-only" style="font-size:11px;color:#ffcc00" id="modelStatus">AI models load when creator tools open.</p>
@@ -380,7 +376,6 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
       </div>
       <input id="fName" maxlength="100" placeholder="Name — e.g. Mama Lina">
       <input id="fRole" maxlength="200" placeholder="Role — e.g. Market Seller, Lae">
-      <select id="fType"><option value="face">Type: Face</option><option value="body">Type: Full Body</option></select>
       <textarea id="fStory" maxlength="2000" placeholder="Their Bone story — what happened before this video?"></textarea>
       <input id="fColor" type="color" value="#bdbdbd" style="height:36px">
       <button id="createStoryVideoBtn" class="creator-only" type="button" onclick="createCharacterStoryVideo(currentChar)" style="width:100%;margin-bottom:8px"><svg class="icon"><use href="#icon-film"/></svg> Generate Bone Movie (AI)</button>
@@ -412,7 +407,7 @@ try{
 }catch(error){
   console.warn('Could not clear saved FishBone characters on page load.',error);
 }
-let aiOn=true, aiReady=false, faceIdentityReady=false, aiModelLoadPromise=null, faceDetector=null, detectionEngine=null, faceDetectorDelegate='CPU', lastIdentityAnalysis=0, lastDetectorTimestamp=0, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
+let aiOn=true, aiReady=false, faceIdentityReady=false, identityAnalysisRunning=false, aiModelLoadPromise=null, faceDetector=null, detectionEngine=null, faceDetectorDelegate='CPU', lastIdentityAnalysis=0, identityCacheUpdatedAt=0, cachedIdentityDetections=[], lastDetectorTimestamp=0, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
 let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), characterBoneMovieDetails=new Map(), savedCharacterMovieIds=new Set(), universeDotNodes=new Map(), faceBoxNodes=new Map(), activeDetectionIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, creatorBoneMovieUrl=null, mainBoneMovieUrl=null, boneReturnSource=null, boneReturnTime=0, boneMovieActive=false, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
 try{
   const savedShareId=localStorage.getItem('fishbone_last_published_share_id');
@@ -425,10 +420,14 @@ const API_BASE=(window.FISHBONE_API_BASE||(location.hostname==='localhost'||loca
 const FACE_MATCH_THRESHOLD=0.6;
 const TRACK_APPEARANCE_THRESHOLD=0.72;
 const MAX_FACE_TEMPLATES=5;
-const DETECTION_LOCK_GRACE_MS=8000;
+const DETECTION_LOCK_GRACE_MS=750;
 const RECENT_TRACK_WINDOW_MS=5000;
+const UNKNOWN_DETECTION_GRACE_MS=450;
+const UNKNOWN_RECORD_VISIBLE_MS=2200;
+const NEW_FACE_CONFIRMATION_MS=220;
 const DETECTION_INTERVAL_MS=120;
-const IDENTITY_REFRESH_INTERVAL_MS=1200;
+const IDENTITY_REFRESH_INTERVAL_MS=1800;
+const FACE_DETECTION_CONFIDENCE=0.18;
 
 function formatTime(s){ if(!isFinite(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function escapeHtml(value){
@@ -545,6 +544,9 @@ async function restoreMainVideoFromBone(resumePlayback){
 }
 function resetPeopleForVideo(){
   detectionGeneration++;
+  cachedIdentityDetections=[];
+  identityCacheUpdatedAt=0;
+  lastIdentityAnalysis=0;
   if(boneMovieActive){
     video.pause();
     video.removeAttribute('src');
@@ -905,7 +907,7 @@ async function loadModels(){
     const detectorOptions={
       baseOptions:{modelAssetPath:modelUrl,delegate:'GPU'},
       runningMode:'VIDEO',
-      minDetectionConfidence:0.18,
+      minDetectionConfidence:FACE_DETECTION_CONFIDENCE,
       minSuppressionThreshold:0.3,
       numFaces:20
     };
@@ -975,6 +977,38 @@ function intersectionOverUnion(first,second){
   return union>0?intersection/union:0;
 }
 
+function suppressDuplicateDetections(detections){
+  const kept=[];
+  for(const candidate of detections){
+    const box={
+      x:candidate.x-candidate.w/2,
+      y:candidate.y-candidate.h/2,
+      width:candidate.w,
+      height:candidate.h
+    };
+    const duplicate=kept.some(existing=>{
+      const existingBox={
+        x:existing.x-existing.w/2,
+        y:existing.y-existing.h/2,
+        width:existing.w,
+        height:existing.h
+      };
+      if(intersectionOverUnion(box,existingBox)>=0.35) return true;
+      const left=Math.max(box.x,existingBox.x);
+      const top=Math.max(box.y,existingBox.y);
+      const right=Math.min(box.x+box.width,existingBox.x+existingBox.width);
+      const bottom=Math.min(box.y+box.height,existingBox.y+existingBox.height);
+      const intersection=Math.max(0,right-left)*Math.max(0,bottom-top);
+      const smallerArea=Math.min(box.width*box.height,existingBox.width*existingBox.height);
+      const centerDistance=Math.hypot(candidate.x-existing.x,candidate.y-existing.y);
+      const centerGate=Math.min(candidate.w,candidate.h,existing.w,existing.h)*0.4;
+      return smallerArea>0&&intersection/smallerArea>=0.7&&centerDistance<=centerGate;
+    });
+    if(!duplicate) kept.push(candidate);
+  }
+  return kept;
+}
+
 function lowPassAlpha(deltaSeconds,cutoff){
   const tau=1/(2*Math.PI*cutoff);
   return 1/(1+tau/deltaSeconds);
@@ -1037,31 +1071,42 @@ async function detectFaces(timestamp){
         descriptor:null
       };
     });
-    if(!faceIdentityReady||performance.now()-lastIdentityAnalysis<IDENTITY_REFRESH_INTERVAL_MS) return detections;
-    lastIdentityAnalysis=performance.now();
-    try{
-      const identityDetections=await faceapi.detectAllFaces(
+    if(!faceIdentityReady) return detections;
+    if(!identityAnalysisRunning&&performance.now()-lastIdentityAnalysis>=IDENTITY_REFRESH_INTERVAL_MS){
+      lastIdentityAnalysis=performance.now();
+      identityAnalysisRunning=true;
+      const identityGeneration=detectionGeneration;
+      faceapi.detectAllFaces(
         video,new faceapi.TinyFaceDetectorOptions({inputSize:640,scoreThreshold:0.22})
-      ).withFaceLandmarks().withFaceDescriptors();
-      return detections.map(result=>{
-        const detectionData=getDetectionData(result);
-        let bestMatch=null,bestOverlap=0;
-        for(const identityResult of identityDetections){
-          const identityData=getDetectionData(identityResult);
-          if(!detectionData||!identityData) continue;
-          const overlap=intersectionOverUnion(detectionData.box,identityData.box);
-          if(overlap>bestOverlap){bestMatch=identityResult;bestOverlap=overlap;}
-        }
-        return bestMatch&&bestOverlap>=0.25
-          ?{...result,descriptor:bestMatch.descriptor}
-          :result;
+      ).withFaceLandmarks().withFaceDescriptors().then(identityDetections=>{
+        if(identityGeneration!==detectionGeneration) return;
+        cachedIdentityDetections=identityDetections.map(result=>{
+          const identityData=getDetectionData(result);
+          return identityData?{box:identityData.box,descriptor:identityData.descriptor}:null;
+        }).filter(Boolean);
+        identityCacheUpdatedAt=performance.now();
+      }).catch(error=>{
+        if(identityGeneration!==detectionGeneration) return;
+        faceIdentityReady=false;
+        document.getElementById('modelStatus').innerText='Face detection ready; identity matching unavailable.';
+        console.warn('Face identity analysis failed; continuing with face detection',error);
+      }).finally(()=>{
+        identityAnalysisRunning=false;
       });
-    }catch(error){
-      faceIdentityReady=false;
-      document.getElementById('modelStatus').innerText='Face detection ready; identity matching unavailable.';
-      console.warn('Face identity analysis failed; continuing with face detection',error);
     }
-    return detections;
+    if(performance.now()-identityCacheUpdatedAt>1800) return detections;
+    return detections.map(result=>{
+      const detectionData=getDetectionData(result);
+      let bestMatch=null,bestOverlap=0;
+      for(const identityResult of cachedIdentityDetections){
+        if(!detectionData) continue;
+        const overlap=intersectionOverUnion(detectionData.box,identityResult.box);
+        if(overlap>bestOverlap){bestMatch=identityResult;bestOverlap=overlap;}
+      }
+      return bestMatch&&bestOverlap>=0.25
+        ?{...result,descriptor:bestMatch.descriptor}
+        :result;
+    });
   }
   const primaryDetections=await faceapi.detectAllFaces(
     video,new faceapi.TinyFaceDetectorOptions({inputSize:640,scoreThreshold:0.25})
@@ -1108,6 +1153,10 @@ document.getElementById('videoInput').addEventListener('change',event=>{
 document.getElementById('videoInput2').addEventListener('change',event=>{
   if(event.target.files[0]) loadVideoFile(event.target.files[0]);
   event.target.value='';
+});
+video.addEventListener('ended',()=>{
+  activeDetectionIds=new Set(currentChar?[currentChar]:[]);
+  renderChars();
 });
 
 function getFaceDescriptorMatch(descriptor, excludedIds){
@@ -1169,7 +1218,7 @@ function confirmNewFace(detection,now,updatedCandidates){
     pendingDetectionCandidates.push({
       x:detection.x,y:detection.y,w:detection.w,h:detection.h,
       firstX:detection.x,firstY:detection.y,firstW:detection.w,firstH:detection.h,
-      descriptor:detection.descriptor,firstTime:video.currentTime,lastSeen:now,
+      descriptor:detection.descriptor,firstTime:video.currentTime,firstSeen:now,lastSeen:now,
       score:detection.score,hits:1,vx:0,vy:0
     });
     return null;
@@ -1192,7 +1241,7 @@ function confirmNewFace(detection,now,updatedCandidates){
   candidate.lastSeen=now;
   candidate.score=Math.max(candidate.score,detection.score);
   candidate.hits++;
-  if(candidate.hits<(Array.isArray(detection.descriptor)?2:3)) return null;
+  if(candidate.hits<3||now-candidate.firstSeen<NEW_FACE_CONFIRMATION_MS) return null;
   pendingDetectionCandidates=pendingDetectionCandidates.filter(item=>item!==candidate);
   const id=`ai_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
   const character={
@@ -1241,6 +1290,26 @@ function getRecentTrackMatch(detection,now,excludedIds){
     .sort((a,b)=>a.score-b.score);
   if(candidates.length>1&&candidates[1].score-candidates[0].score<0.18) return null;
   return candidates[0]||null;
+}
+
+function isNearExistingTrack(detection,now){
+  return chars.some(character=>{
+    const track=detectionTracks.get(character.id);
+    if(!track||now-track.lastSeen>RECENT_TRACK_WINDOW_MS) return false;
+    const elapsed=Math.min((now-track.lastSeen)/1000,1.5);
+    const predictedX=track.smoothX+track.vx*elapsed;
+    const predictedY=track.smoothY+track.vy*elapsed;
+    const centerDistance=Math.hypot(predictedX-detection.x,predictedY-detection.y);
+    const centerGate=Math.min(detection.w,detection.h,track.w||detection.w,track.h||detection.h)*0.4;
+    if(centerDistance>centerGate) return false;
+    const sizeRatio=Math.max(
+      detection.w/Math.max(track.w||detection.w,0.1),
+      (track.w||detection.w)/Math.max(detection.w,0.1),
+      detection.h/Math.max(track.h||detection.h,0.1),
+      (track.h||detection.h)/Math.max(detection.h,0.1)
+    );
+    return sizeRatio<=2.5;
+  });
 }
 
 function getLockedTrackAssignments(detections,now){
@@ -1334,7 +1403,7 @@ async function startDetection(){
     detectionRunning=true;
     const generation=detectionGeneration;
     try{
-      const detailedThreshold=0.18;
+      const detailedThreshold=FACE_DETECTION_CONFIDENCE;
       const detections=await detectFaces(performance.now());
       if(generation!==detectionGeneration || !aiOn || video.paused || video.ended || mode!=='main') return;
       const vw=video.videoWidth, vh=video.videoHeight;
@@ -1361,11 +1430,12 @@ async function startDetection(){
         });
       });
       found.sort((a,b)=>b.score-a.score);
-      const lockedAssignments=getLockedTrackAssignments(found,now);
+      const uniqueFound=suppressDuplicateDetections(found);
+      const lockedAssignments=getLockedTrackAssignments(uniqueFound,now);
       let newFaces=[];
       let usedIds=new Set(chars.filter(character=>character.trackingLocked).map(character=>character.id));
       const updatedCandidates=new Set();
-      found.forEach((detection,i)=>{
+      uniqueFound.forEach((detection,i)=>{
         const {x,y,w,h,descriptor}=detection;
         const lockedCharacter=lockedAssignments.get(i);
         const recentTrackMatch=lockedCharacter?{character:lockedCharacter}:getRecentTrackMatch(detection,now,usedIds);
@@ -1399,6 +1469,7 @@ async function startDetection(){
           usedIds.add(c.id);
           newFaces.push(c);
         } else {
+          if(isNearExistingTrack(detection,now)) return;
           const newChar=confirmNewFace(detection,now,updatedCandidates);
           if(newChar){
             usedIds.add(newChar.id);
@@ -1409,7 +1480,8 @@ async function startDetection(){
       const nextActiveDetectionIds=new Set(newFaces.map(c=>c.id));
       for(const character of chars){
         const track=detectionTracks.get(character.id);
-        if(!track||now-track.lastSeen>DETECTION_LOCK_GRACE_MS||nextActiveDetectionIds.has(character.id)) continue;
+        const gracePeriod=character.isUnknown?UNKNOWN_DETECTION_GRACE_MS:DETECTION_LOCK_GRACE_MS;
+        if(!track||now-track.lastSeen>gracePeriod||nextActiveDetectionIds.has(character.id)) continue;
         const elapsed=Math.min((now-track.lastSeen)/1000,1.5);
         const coastTime=0.25*(1-Math.exp(-elapsed/0.25));
         character.x=Math.max(0,Math.min(100,track.smoothX+track.vx*coastTime));
@@ -1420,8 +1492,13 @@ async function startDetection(){
       activeDetectionIds=nextActiveDetectionIds;
       renderChars();
       if(newFaces.length>0) saveToStorage();
-      document.getElementById('faceCount').innerText=found.length+' faces • '+chars.length+' people';
-      document.getElementById('hint').innerText='AI found '+found.length+' face(s) — hover or tap a box to reveal';
+      const visiblePeople=chars.filter(character=>{
+        if(!character.isUnknown||character.id===currentChar) return true;
+        const track=detectionTracks.get(character.id);
+        return track&&now-track.lastSeen<=UNKNOWN_RECORD_VISIBLE_MS;
+      });
+      document.getElementById('faceCount').innerText=uniqueFound.length+' faces • '+visiblePeople.length+' people';
+      document.getElementById('hint').innerText='AI found '+uniqueFound.length+' face(s) — hover or tap a box to reveal';
     }catch(error){
       document.getElementById('modelStatus').innerText='Face detection error; retrying. Check the browser console for details.';
       console.error('Face detection failed',error);
@@ -1463,7 +1540,6 @@ function renderChars(){
     const minHeight=layer.clientHeight?Math.max(0.35,6/layer.clientHeight*100):0.5;
     let w=Number.isFinite(Number(c.w))?Math.max(minWidth,Math.min(100,Number(c.w))):18;
     let h=Number.isFinite(Number(c.h))?Math.max(minHeight,Math.min(100,Number(c.h))):22;
-    if(c.type==='body'){ w=Math.max(w,22); h=Math.max(h,40); }
     let node=faceBoxNodes.get(c.id);
     if(!node){
       node=document.createElement('div');
@@ -1480,7 +1556,7 @@ function renderChars(){
       faceBoxNodes.set(c.id,node);
       layer.appendChild(node);
     }
-    node.className=`face-box ${c.isUnknown?'unknown':''} ${c.type==='body'?'body':''} ${c.trackingLocked?'identity-locked':''} ${isLocked?'locked':''}`;
+    node.className=`face-box ${c.isUnknown?'unknown':''} ${c.trackingLocked?'identity-locked':''} ${isLocked?'locked':''}`;
     node.dataset.charId=c.id;
     node.setAttribute('aria-label',c.trackingLocked
       ?`Tracking locked to ${c.name}. ${isLocked?'Currently selected for editing.':'Select to edit.'}`
@@ -1490,10 +1566,8 @@ function renderChars(){
     node.style.top=`${y}%`;
     node.style.width=`${w}%`;
     node.style.height=`${h}%`;
-    if(c.type!=='body'){
-      const boxPixelSize=Math.min(w*layer.clientWidth/100,h*layer.clientHeight/100);
-      node.style.borderWidth=`${Math.max(1,Math.min(3,boxPixelSize*0.12))}px`;
-    }
+    const boxPixelSize=Math.min(w*layer.clientWidth/100,h*layer.clientHeight/100);
+    node.style.borderWidth=`${Math.max(1,Math.min(3,boxPixelSize*0.12))}px`;
     node.style.backgroundColor=`${color}22`;
     node.style.borderColor=color;
     const tag=node.querySelector('.tag');
@@ -1504,10 +1578,16 @@ function renderChars(){
     const initialsText=`${initials} · EDIT`;
     if(initialsLabel.textContent!==initialsText) initialsLabel.textContent=initialsText;
   }
-  document.getElementById('charCount').innerText=chars.length;
+  const now=Date.now();
+  const visiblePeople=chars.filter(character=>{
+    if(!character.isUnknown||character.id===currentChar) return true;
+    const track=detectionTracks.get(character.id);
+    return track&&now-track.lastSeen<=UNKNOWN_RECORD_VISIBLE_MS;
+  });
+  document.getElementById('charCount').innerText=visiblePeople.length;
   let list=document.getElementById('charList');
-  if(chars.length===0) list.innerHTML='<p style="color:#a8c8d8">No people detected yet.</p>';
-  else list.innerHTML=chars.map(c=>{
+  if(visiblePeople.length===0) list.innerHTML='<p style="color:#a8c8d8">No people detected yet.</p>';
+  else list.innerHTML=visiblePeople.map(c=>{
     const initials=escapeHtml(c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase());
     const name=escapeHtml(c.name);
     const role=escapeHtml(c.role||'');
@@ -1516,7 +1596,7 @@ function renderChars(){
     const movieLabel=characterBoneMovies.has(c.id)
       ?` · ${movieSource==='ai'?'AI Bone Movie':'Local Bone Movie'} ready`
       :'';
-    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div class="char-row-details"><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · ${c.type==='body'?'Full body':'Face'} · View story${movieLabel}</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span><button type="button" class="clear-person-btn" aria-label="Clear ${name} record" title="Clear this detected person and saved details" onclick="clearCharacterRecord('${c.id}',event)"><svg class="icon"><use href="#icon-trash"/></svg></button></div>`;
+    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div class="char-row-details"><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · Face only · View story${movieLabel}</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span><button type="button" class="clear-person-btn" aria-label="Clear ${name} record" title="Clear this detected person and saved details" onclick="clearCharacterRecord('${c.id}',event)"><svg class="icon"><use href="#icon-trash"/></svg></button></div>`;
   }).join('');
 }
 
@@ -1577,7 +1657,6 @@ function selectDetectedPerson(id,event){
   document.getElementById('fRole').value=character.role||'';
   document.getElementById('fStory').value=character.story||'';
   document.getElementById('fColor').value=character.color;
-  document.getElementById('fType').value=character.type;
   document.getElementById('formTitle').innerText=character.isUnknown?'Name this person':`Edit ${character.name}`;
   showSelectedFace(character);
   document.getElementById('hint').innerText=`${character.name} is locked for editing. Click the highlighted box to reopen their details.`;
@@ -1603,7 +1682,7 @@ function saveCharacter(){
     role:document.getElementById('fRole').value.trim(),
     story:document.getElementById('fStory').value.trim(),
     color:document.getElementById('fColor').value,
-    type:document.getElementById('fType').value
+    type:'face'
   };
   const movieDetails=characterBoneMovieDetails.get(c.id);
   const movieMatchesCharacter=movieDetails&&Object.keys(updatedCharacter).every(key=>movieDetails[key]===updatedCharacter[key]);
@@ -1680,7 +1759,6 @@ async function clearCharacterRecord(id,event){
     document.getElementById('fRole').value=character.role;
     document.getElementById('fStory').value='';
     document.getElementById('fColor').value=character.color;
-    document.getElementById('fType').value=character.type;
     document.getElementById('formTitle').innerText='Name this person';
     if(video.readyState>=HTMLMediaElement.HAVE_CURRENT_DATA) showSelectedFace(character);
     clearStoryVideo();
@@ -1808,7 +1886,7 @@ async function enterBone(id, e){
   document.getElementById('modeLabel').innerText='● STORY BONE — '+c.name;
   document.getElementById('modeLabel').className='label bone';
   document.getElementById('backBtn').style.display='block';
-  editingId=id; document.getElementById('fName').value=c.isUnknown?'':c.name; document.getElementById('fRole').value=c.role||''; document.getElementById('fStory').value=c.story||''; document.getElementById('fColor').value=c.color; document.getElementById('fType').value=c.type;
+  editingId=id; document.getElementById('fName').value=c.isUnknown?'':c.name; document.getElementById('fRole').value=c.role||''; document.getElementById('fStory').value=c.story||''; document.getElementById('fColor').value=c.color;
   document.getElementById('formTitle').innerText='Edit '+c.name+' — Add their Bone story';
   renderChars();
 }
@@ -1973,7 +2051,7 @@ async function createCharacterStoryVideo(id){
     role:document.getElementById('fRole').value.trim(),
     story:document.getElementById('fStory').value.trim(),
     color:document.getElementById('fColor').value,
-    type:document.getElementById('fType').value,
+    type:'face',
     isUnknown:false
   };
   if(!movieCharacter.name){
