@@ -1,0 +1,5 @@
+{
+  "mama": {"name": "Mama Lina", "role": "Local Storykeeper", "story": "Mama Lina came to Lae at 16 to sell kaukau. 40 years later she knows every vendor, every story.", "main_time": 12},
+  "kuri": {"name": "Kuri", "role": "Future Businessman - 19", "story": "Kuri is 19. He sells buai to pay his sister's school fees. His dream is to own a trade store.", "main_time": 18},
+  "peter": {"name": "Peter", "role": "Fisherman from Siassi", "story": "Peter fishes all night off Siassi, sails 3 hours to Lae. His fish feeds 50 families a day.", "main_time": 24}
+}
