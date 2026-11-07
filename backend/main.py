@@ -36,6 +36,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "status": "FishBone Backend is LIVE",
+        "message": "Creators build Universes, Users just click",
+    }
+
+
+@app.get("/health")
+def health_check() -> dict[str, bool]:
+    return {"ok": True}
+
+
 DATA_DIR = Path(os.environ.get("FISHBONE_DATA_DIR", Path(__file__).resolve().parent / "data"))
 PUBLISHED_DIR = DATA_DIR / "published"
 SHARES_FILE = DATA_DIR / "shares.json"
