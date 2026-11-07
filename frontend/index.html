@@ -15,6 +15,7 @@ body{background:#020a12;color:#fff}
 .top button.ghost{background:#fff}
 .top button.active{background:#ffcc00}
 .top button.mode-selected{background:#ffcc00;box-shadow:0 0 0 2px #fff}
+.top button:disabled{opacity:.55;cursor:not-allowed}
 
 .wrap{width:100%;max-width:1320px;margin:0 auto;padding:12px;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
 .stage{position:relative;width:100%;max-width:1280px;margin:0 auto;border-radius:16px;overflow:hidden;aspect-ratio:16/9;background:#000;border:2px solid #00e5c7}
@@ -26,13 +27,15 @@ body{background:#020a12;color:#fff}
 .label{position:absolute;top:12px;left:12px;background:#ff3b30;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:800;z-index:20}
 .label.bone{background:#00e5c7;color:#000}
 .label.blend{background:#ffcc00;color:#000}
-.face-box{position:absolute;border:3px solid #00e5c7;border-radius:10px;cursor:pointer;z-index:10;transform:translate(-50%,-50%);transition:opacity .15s,transform .15s;background:rgba(0,229,199,.08);opacity:.75}
-.face-box:hover,.face-box:focus-visible,.face-box.revealed{border-color:#ffcc00;background:rgba(255,204,0,.15);transform:translate(-50%,-50%) scale(1.05);opacity:1}
+.face-box{position:absolute;border:3px solid #00e5c7;border-radius:10px;cursor:pointer;z-index:10;transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out,width .12s ease-out,height .12s ease-out,opacity .15s,transform .15s,background-color .15s;background:rgba(0,229,199,.08);opacity:.75;will-change:left,top,width,height}
+.face-box:hover,.face-box:focus-visible,.face-box.revealed,.face-box.locked{border-color:#ffcc00;background:rgba(255,204,0,.15);transform:translate(-50%,-50%) scale(1.05);opacity:1;box-shadow:0 0 0 3px #ffcc0066,0 0 18px #ffcc00aa}
+.face-box.identity-locked:not(:hover):not(:focus-visible):not(.locked){box-shadow:0 0 0 2px #c5c5c533}
 .face-box .tag{position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:#00e5c7;color:#000;font-size:10px;font-weight:900;padding:4px 8px;border-radius:10px;white-space:nowrap}
 .face-box.unknown{border-color:#ffcc00;border-style:dashed}
 .face-box.unknown .tag{background:#ffcc00}
 .face-box.body{border-color:#ff6b9d;border-radius:20px}
 .face-box.body .tag{background:#ff6b9d;color:#fff}
+@media(prefers-reduced-motion:reduce){.face-box{transition:opacity .15s,background-color .15s,transform .15s;will-change:auto}}
 .controls{position:absolute;bottom:0;left:0;right:0;padding:12px;z-index:25;display:flex;gap:10px;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,.9));flex-wrap:wrap}
 .controls button{background:#00e5c7;border:none;padding:8px 14px;border-radius:20px;font-weight:900;cursor:pointer;color:#000}
 .controls button.ghost{background:#fff}
@@ -44,6 +47,9 @@ body{background:#020a12;color:#fff}
 .card input,.card textarea,.card select{width:100%;background:#041e2b;border:1px solid #1a4a5a;color:#fff;padding:9px;border-radius:8px;margin-bottom:8px;font-size:13px}
 .card textarea{height:70px}
 .char-row{display:flex;gap:10px;align-items:center;background:#041e2b;border:1px solid #1a4a5a;border-radius:10px;padding:8px;margin-bottom:8px;cursor:pointer}
+.char-row-details{flex:1;min-width:0}
+.clear-person-btn,.clear-all-people-btn{background:transparent!important;border:1px solid var(--line)!important;color:var(--muted)!important;border-radius:8px;padding:6px 9px;cursor:pointer}
+.clear-person-btn:hover,.clear-all-people-btn:hover{border-color:#ff6b6b!important;color:#ff6b6b!important}
 .char-row.active{border-color:#00e5c7;background:#0a3a2e}
 .avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;flex-shrink:0}
 .bone-overlay{position:absolute;inset:0;background:linear-gradient(135deg,#0a4a3a,#0a2a4a);z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;overflow-y:auto}
@@ -112,7 +118,7 @@ body{background:var(--page);color:var(--text)}
 .empty #modelStatus,#aiStatus{color:var(--muted)!important}
 #userBonePrice,#boneMeta,#storyVideoStatus,#unlockStatus{color:var(--muted)!important}
 #faceCount{background:var(--surface-raised)!important;color:var(--text)!important}
-button[onclick="clearChars()"]{border-color:var(--line)!important;color:var(--muted)!important}
+button[onclick="clearSelectedCharacterDetails()"]{border-color:var(--line)!important;color:var(--muted)!important}
 .cards{width:100%;gap:16px;margin-top:16px}
 .card,.creator-actions{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
 .card h3{font-size:15px;margin-bottom:12px}
@@ -301,6 +307,7 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
   <img class="logo" src="/Logo%201.jpeg" alt="FishBone logo">
   <div><h1>FishBone</h1><p id="publicTitle">Clickable Character Universe</p></div>
   <div class="top-actions">
+    <button class="creator-only" id="watchBtn" type="button" onclick="watchCharacterMovie()" disabled title="Save a character with a Bone Movie to enable Watch"><svg class="icon"><use href="#icon-play"/></svg> Watch</button>
     <label class="creator-only" style="background:#00e5c7;color:#000;padding:8px 14px;border-radius:20px;font-weight:800;cursor:pointer"><svg class="icon"><use href="#icon-upload"/></svg> Upload video <input type="file" id="videoInput" accept="video/*" style="display:none"></label>
     <button class="creator-only active" id="aiBtn" onclick="toggleAI()"><svg class="icon"><use href="#icon-scan"/></svg> AI detection: ON</button>
   </div>
@@ -359,7 +366,10 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
 
   <div class="cards creator-only">
     <div class="card">
-      <h3><svg class="icon"><use href="#icon-user-group"/></svg> Detected people (<span id="charCount">0</span>) · <span id="aiStatus" style="color:#ffcc00">AI not loaded</span></h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <h3 style="margin:0"><svg class="icon"><use href="#icon-user-group"/></svg> Detected people (<span id="charCount">0</span>) · <span id="aiStatus" style="color:#ffcc00">AI not loaded</span></h3>
+        <button type="button" class="clear-all-people-btn" onclick="clearAllPeople()"><svg class="icon"><use href="#icon-trash"/></svg> Clear all detected people</button>
+      </div>
       <div id="charList"><p style="color:#a8c8d8">Upload a video. AI will list people here automatically.</p></div>
     </div>
     <div class="card" id="personDetailsCard">
@@ -378,7 +388,7 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
       <video id="storyVideo" class="story-video" controls playsinline style="display:none;margin:0 0 8px"></video>
       <a id="storyDownload" class="story-download creator-only" style="display:none;margin:0 0 10px" download><svg class="icon"><use href="#icon-download"/></svg> Download Bone Movie</a>
       <button onclick="saveCharacter()" style="width:100%;background:#00e5c7;border:none;padding:11px;border-radius:10px;font-weight:900;cursor:pointer"><svg class="icon"><use href="#icon-save"/></svg> Save character story</button>
-      <button onclick="clearChars()" style="width:100%;background:transparent;border:1px solid #ff3b30;color:#ff3b30;padding:9px;border-radius:10px;margin-top:8px;cursor:pointer"><svg class="icon"><use href="#icon-trash"/></svg> Clear all</button>
+      <button onclick="clearSelectedCharacterDetails()" style="width:100%;background:transparent;border:1px solid #ff3b30;color:#ff3b30;padding:9px;border-radius:10px;margin-top:8px;cursor:pointer"><svg class="icon"><use href="#icon-trash"/></svg> Clear selected details &amp; movie</button>
       <div class="creator-actions">
         <h3>Publish character universe</h3>
         <p>Save each character, create their Bone Movie, then publish the original video and all characters together.</p>
@@ -398,25 +408,27 @@ button:focus-visible,a:focus-visible,label:focus-within{outline:2px solid var(--
 <script>
 let chars=[];
 try{
-  const savedCharacters=JSON.parse(localStorage.getItem('fishbone_ai_chars')||'[]');
-  if(Array.isArray(savedCharacters)){
-    chars=savedCharacters.filter(character=>
-      character&&typeof character==='object'&&typeof character.id==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(character.id)&&typeof character.name==='string'
-    );
-  }else{
-    console.warn('Saved FishBone characters were not a list; starting with an empty list.');
-  }
+  localStorage.removeItem('fishbone_ai_chars');
 }catch(error){
-  console.error('Could not restore saved FishBone characters; starting with an empty list.',error);
+  console.warn('Could not clear saved FishBone characters on page load.',error);
 }
-let aiOn=true, aiReady=false, faceIdentityReady=false, aiModelLoadPromise=null, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
-let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), characterBoneMovieDetails=new Map(), universeDotNodes=new Map(), activeDetectionIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, creatorBoneMovieUrl=null, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
+let aiOn=true, aiReady=false, faceIdentityReady=false, aiModelLoadPromise=null, faceDetector=null, detectionEngine=null, faceDetectorDelegate='CPU', lastIdentityAnalysis=0, lastDetectorTimestamp=0, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
+let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), characterBoneMovieDetails=new Map(), savedCharacterMovieIds=new Set(), universeDotNodes=new Map(), faceBoxNodes=new Map(), activeDetectionIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, creatorBoneMovieUrl=null, mainBoneMovieUrl=null, boneReturnSource=null, boneReturnTime=0, boneMovieActive=false, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
+try{
+  const savedShareId=localStorage.getItem('fishbone_last_published_share_id');
+  if(savedShareId&&/^[A-Za-z0-9_-]{1,80}$/.test(savedShareId)) publishedShareId=savedShareId;
+}catch(error){
+  console.warn('Could not restore the last published FishBone link.',error);
+}
 let video=document.getElementById('video');
 const API_BASE=(window.FISHBONE_API_BASE||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'http://localhost:8000':'https://fishbone-backend.onrender.com')).replace(/\/$/,'');
 const FACE_MATCH_THRESHOLD=0.6;
 const TRACK_APPEARANCE_THRESHOLD=0.72;
 const MAX_FACE_TEMPLATES=5;
-const DETECTION_LOCK_GRACE_MS=2500;
+const DETECTION_LOCK_GRACE_MS=8000;
+const RECENT_TRACK_WINDOW_MS=5000;
+const DETECTION_INTERVAL_MS=120;
+const IDENTITY_REFRESH_INTERVAL_MS=1200;
 
 function formatTime(s){ if(!isFinite(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function escapeHtml(value){
@@ -425,6 +437,32 @@ function escapeHtml(value){
   })[character]);
 }
 function apiUrl(path){return API_BASE+path;}
+function updateWatchButton(){
+  const button=document.getElementById('watchBtn');
+  const savedCharacter=chars.find(character=>
+    character.id===currentChar&&savedCharacterMovieIds.has(character.id)&&characterBoneMovies.has(character.id)
+  );
+  button.disabled=!savedCharacter&&!publishedShareId;
+  button.title=savedCharacter
+    ?`Watch ${savedCharacter.name}'s saved Bone Movie`
+    :publishedShareId?'Play your last published FishBone universe':'Save a character with a Bone Movie to enable Watch';
+}
+function watchCharacterMovie(){
+  const savedCharacter=chars.find(character=>
+    character.id===currentChar&&savedCharacterMovieIds.has(character.id)&&characterBoneMovies.has(character.id)
+  );
+  if(savedCharacter){
+    enterBone(savedCharacter.id);
+    return;
+  }
+  if(!publishedShareId) return;
+  const shareUrl=new URL(window.location.href);
+  shareUrl.search='';
+  shareUrl.hash='';
+  shareUrl.searchParams.set('share',publishedShareId);
+  shareUrl.searchParams.set('watch','1');
+  window.location.assign(shareUrl.href);
+}
 function setCreatorMode(enabled){
   clearCreatorBoneMovie();
   document.getElementById('boneOverlay').classList.remove('show');
@@ -433,6 +471,7 @@ function setCreatorMode(enabled){
     document.body.classList.remove('public-view','preview-view');
     publicShare=null;
     document.getElementById('faceLayer').innerHTML='';
+    faceBoxNodes.clear();
     universeDotNodes.clear();
     const boneVideo=document.getElementById('userBoneVideo');
     boneVideo.pause();
@@ -453,10 +492,12 @@ function setCreatorMode(enabled){
 function saveToStorage(){
   try{
     localStorage.setItem('fishbone_ai_chars',JSON.stringify(chars));
+    return true;
   }catch(error){
     console.error('Could not save FishBone characters in this browser',error);
     const status=document.getElementById('publishStatus');
     if(status) status.innerText='Changes are active for this session but could not be saved in this browser.';
+    return false;
   }
 }
 function requestMainVideoPlayback(){
@@ -472,9 +513,49 @@ function requestMainVideoPlayback(){
     }
   });
 }
+async function restoreMainVideoFromBone(resumePlayback){
+  if(!boneMovieActive) return;
+  const source=boneReturnSource;
+  const returnTime=boneReturnTime;
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  if(mainBoneMovieUrl) URL.revokeObjectURL(mainBoneMovieUrl);
+  mainBoneMovieUrl=null;
+  boneReturnSource=null;
+  boneMovieActive=false;
+  if(!source) return;
+
+  await new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>{cleanup();reject(new Error('The original video took too long to reload.'));},15000);
+    const cleanup=()=>{
+      clearTimeout(timeout);
+      video.removeEventListener('loadedmetadata',onLoaded);
+      video.removeEventListener('error',onError);
+    };
+    const onLoaded=()=>{cleanup();resolve();};
+    const onError=()=>{cleanup();reject(new Error('The original video could not be restored.'));};
+    video.addEventListener('loadedmetadata',onLoaded,{once:true});
+    video.addEventListener('error',onError,{once:true});
+    video.src=source;
+    video.load();
+  });
+  if(Number.isFinite(video.duration)) video.currentTime=Math.min(returnTime,video.duration);
+  if(resumePlayback) await requestMainVideoPlayback();
+}
 function resetPeopleForVideo(){
   detectionGeneration++;
+  if(boneMovieActive){
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    if(mainBoneMovieUrl) URL.revokeObjectURL(mainBoneMovieUrl);
+    mainBoneMovieUrl=null;
+    boneReturnSource=null;
+    boneMovieActive=false;
+  }
   chars=[];
+  savedCharacterMovieIds.clear();
   publicShare=null;
   publicUnlockedCharacterIds.clear();
   detectionTracks.clear();
@@ -590,7 +671,7 @@ async function copyFishBoneLink(){
   }
 }
 
-async function loadPublicShare(shareId,preview=false){
+async function loadPublicShare(shareId,preview=false,autoplay=false){
   document.body.classList.remove('creator-mode');
   document.body.classList.add('public-view');
   document.body.classList.toggle('preview-view',preview);
@@ -610,6 +691,13 @@ async function loadPublicShare(shareId,preview=false){
       video.muted=false;
       video.src=apiUrl(share.source_url);
       video.style.display='block';
+      if(autoplay){
+        try{await video.play();}
+        catch(error){
+          document.getElementById('publicTitle').innerText='Tap play to watch, then tap a dot to explore a Bone Movie';
+          console.warn('FishBone Player autoplay was blocked; use the player controls.',error);
+        }
+      }
     }else{
       video.controls=true;
       video.muted=false;
@@ -789,40 +877,80 @@ async function blendBackToUniverse(){
   }
 }
 
-// 1. LOAD AI MODELS - Detection and face identity matching
+// 1. LOAD AI MODELS - MediaPipe detection with optional face identity matching
+async function loadFaceApiModels(){
+  if(!window.faceapi){
+    await new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
+      script.onload=resolve;
+      script.onerror=()=>reject(new Error('Could not load the face identity library.'));
+      document.head.appendChild(script);
+    });
+  }
+  const modelUrl='https://justadudewhohacks.github.io/face-api.js/models';
+  if(!faceapi.nets.tinyFaceDetector.isLoaded) await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl);
+  if(!faceapi.nets.faceLandmark68Net.isLoaded) await faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl);
+  if(!faceapi.nets.faceRecognitionNet.isLoaded) await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl);
+  faceIdentityReady=true;
+}
+
 async function loadModels(){
+  const modelUrl='https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
   try{
-    if(!window.faceapi){
-      await new Promise((resolve,reject)=>{
-        const script=document.createElement('script');
-        script.src='https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-        script.onload=resolve;
-        script.onerror=()=>reject(new Error('Could not load the face detection library.'));
-        document.head.appendChild(script);
-      });
-    }
-    const MODEL_URL='https://justadudewhohacks.github.io/face-api.js/models';
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    aiReady=true;
-    document.getElementById('aiStatus').innerText='AI ready';
-    document.getElementById('aiStatus').style.color='var(--accent)';
-    document.getElementById('modelStatus').innerText='Face detection ready. Loading identity matching...';
+    const vision=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/vision_bundle.mjs');
+    const fileset=await vision.FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm'
+    );
+    const detectorOptions={
+      baseOptions:{modelAssetPath:modelUrl,delegate:'GPU'},
+      runningMode:'VIDEO',
+      minDetectionConfidence:0.18,
+      minSuppressionThreshold:0.3,
+      numFaces:20
+    };
     try{
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      faceIdentityReady=true;
-      document.getElementById('modelStatus').innerText='Face identity matching enabled';
+      faceDetector=await vision.FaceDetector.createFromOptions(fileset,detectorOptions);
+      faceDetectorDelegate='GPU';
+    }catch(gpuError){
+      console.warn('MediaPipe GPU face detection is unavailable; trying CPU',gpuError);
+      faceDetector=await vision.FaceDetector.createFromOptions(fileset,{
+        ...detectorOptions,
+        baseOptions:{...detectorOptions.baseOptions,delegate:'CPU'}
+      });
+      faceDetectorDelegate='CPU';
+    }
+    detectionEngine='mediapipe';
+    aiReady=true;
+    document.getElementById('aiStatus').innerText=`AI ready · MediaPipe ${faceDetectorDelegate}`;
+    document.getElementById('modelStatus').innerText='MediaPipe real-time face detection ready. Loading identity matching...';
+    document.getElementById('aiStatus').style.color='var(--accent)';
+    try{
+      await loadFaceApiModels();
+      document.getElementById('modelStatus').innerText='MediaPipe face detection and identity matching enabled';
     }catch(error){
       faceIdentityReady=false;
-      document.getElementById('modelStatus').innerText='Face detection ready; identity matching unavailable.';
-      console.warn('Face identity models could not be loaded; continuing with face detection',error);
+      document.getElementById('modelStatus').innerText='MediaPipe detection ready; identity matching unavailable.';
+      console.warn('Face identity models could not be loaded; continuing with MediaPipe detection',error);
     }
     document.getElementById('modelStatus').style.color='var(--accent)';
   }catch(error){
-    aiReady=false;
-    document.getElementById('aiStatus').innerText='AI unavailable';
-    document.getElementById('modelStatus').innerText='Could not load the face detector. Check your connection and try again.';
-    console.error('Face detector could not be loaded',error);
+    console.error('MediaPipe face detector could not be loaded; trying the compatibility detector',error);
+    try{
+      await loadFaceApiModels();
+      detectionEngine='faceapi';
+      aiReady=true;
+      document.getElementById('aiStatus').innerText='AI ready · compatibility mode';
+      document.getElementById('aiStatus').style.color='var(--accent)';
+      document.getElementById('modelStatus').innerText='MediaPipe unavailable; using compatibility face detector.';
+      document.getElementById('modelStatus').style.color='var(--accent)';
+    }catch(fallbackError){
+      aiReady=false;
+      faceIdentityReady=false;
+      document.getElementById('aiStatus').innerText='AI unavailable';
+      document.getElementById('modelStatus').innerText='Could not load a face detector. Check your connection and try again.';
+      console.error('Face detector could not be loaded',fallbackError);
+    }
   }
 }
 function ensureModelsLoaded(){
@@ -838,17 +966,110 @@ function getDetectionData(result){
   return {box,score,descriptor:Array.isArray(result?.descriptor)?Array.from(result.descriptor):null};
 }
 
-async function detectFaces(options){
-  if(faceIdentityReady){
+function intersectionOverUnion(first,second){
+  const left=Math.max(first.x,second.x),top=Math.max(first.y,second.y);
+  const right=Math.min(first.x+first.width,second.x+second.width);
+  const bottom=Math.min(first.y+first.height,second.y+second.height);
+  const intersection=Math.max(0,right-left)*Math.max(0,bottom-top);
+  const union=first.width*first.height+second.width*second.height-intersection;
+  return union>0?intersection/union:0;
+}
+
+function lowPassAlpha(deltaSeconds,cutoff){
+  const tau=1/(2*Math.PI*cutoff);
+  return 1/(1+tau/deltaSeconds);
+}
+
+function smoothDetectionBox(previous,detection,deltaSeconds){
+  const filtered={};
+  for(const [key,minCutoff,beta] of [
+    ['x',0.9,0.025],['y',0.9,0.025],['w',1.6,0.02],['h',1.6,0.02]
+  ]){
+    const raw=detection[key];
+    const stateKey=key[0].toUpperCase()+key.slice(1);
+    const previousRaw=previous?.[key];
+    const previousSmooth=previous?.[`smooth${stateKey}`];
+    const previousDerivative=previous?.[`derivative${stateKey}`]||0;
+    if(!Number.isFinite(previousRaw)||!Number.isFinite(previousSmooth)){
+      filtered[key]=raw;
+      filtered[`derivative${stateKey}`]=0;
+      continue;
+    }
+    const derivative=(raw-previousRaw)/deltaSeconds;
+    const derivativeAlpha=lowPassAlpha(deltaSeconds,1);
+    const filteredDerivative=derivativeAlpha*derivative+(1-derivativeAlpha)*previousDerivative;
+    const cutoff=minCutoff+beta*Math.abs(filteredDerivative);
+    const valueAlpha=lowPassAlpha(deltaSeconds,cutoff);
+    filtered[key]=valueAlpha*raw+(1-valueAlpha)*previousSmooth;
+    filtered[`derivative${stateKey}`]=filteredDerivative;
+  }
+  return filtered;
+}
+
+function mergeDetectionPasses(primary,highResolution){
+  const merged=[...primary];
+  for(const candidate of highResolution){
+    const candidateData=getDetectionData(candidate);
+    if(!candidateData) continue;
+    const duplicateIndex=merged.findIndex(existing=>{
+      const existingData=getDetectionData(existing);
+      if(!existingData) return false;
+      return intersectionOverUnion(existingData.box,candidateData.box)>=0.45;
+    });
+    if(duplicateIndex<0) merged.push(candidate);
+    else if(candidateData.score>getDetectionData(merged[duplicateIndex]).score) merged[duplicateIndex]=candidate;
+  }
+  return merged;
+}
+
+async function detectFaces(timestamp){
+  if(detectionEngine==='mediapipe'&&faceDetector){
+    const frameTimestamp=Math.max(timestamp,lastDetectorTimestamp+1);
+    lastDetectorTimestamp=frameTimestamp;
+    const mediapipeDetections=faceDetector.detectForVideo(video,frameTimestamp).detections||[];
+    const detections=mediapipeDetections.map(detection=>{
+      const box=detection.boundingBox;
+      return {
+        detection:{
+          box:{x:box.originX,y:box.originY,width:box.width,height:box.height},
+          score:Number(detection.categories?.[0]?.score)||0
+        },
+        descriptor:null
+      };
+    });
+    if(!faceIdentityReady||performance.now()-lastIdentityAnalysis<IDENTITY_REFRESH_INTERVAL_MS) return detections;
+    lastIdentityAnalysis=performance.now();
     try{
-      return await faceapi.detectAllFaces(video,options).withFaceLandmarks().withFaceDescriptors();
+      const identityDetections=await faceapi.detectAllFaces(
+        video,new faceapi.TinyFaceDetectorOptions({inputSize:640,scoreThreshold:0.22})
+      ).withFaceLandmarks().withFaceDescriptors();
+      return detections.map(result=>{
+        const detectionData=getDetectionData(result);
+        let bestMatch=null,bestOverlap=0;
+        for(const identityResult of identityDetections){
+          const identityData=getDetectionData(identityResult);
+          if(!detectionData||!identityData) continue;
+          const overlap=intersectionOverUnion(detectionData.box,identityData.box);
+          if(overlap>bestOverlap){bestMatch=identityResult;bestOverlap=overlap;}
+        }
+        return bestMatch&&bestOverlap>=0.25
+          ?{...result,descriptor:bestMatch.descriptor}
+          :result;
+      });
     }catch(error){
       faceIdentityReady=false;
       document.getElementById('modelStatus').innerText='Face detection ready; identity matching unavailable.';
       console.warn('Face identity analysis failed; continuing with face detection',error);
     }
+    return detections;
   }
-  return faceapi.detectAllFaces(video,options);
+  const primaryDetections=await faceapi.detectAllFaces(
+    video,new faceapi.TinyFaceDetectorOptions({inputSize:640,scoreThreshold:0.25})
+  );
+  const detailedDetections=await faceapi.detectAllFaces(
+    video,new faceapi.TinyFaceDetectorOptions({inputSize:960,scoreThreshold:0.18})
+  );
+  return mergeDetectionPasses(primaryDetections,detailedDetections);
 }
 
 function mapDetectionBoxToStage(box,videoWidth,videoHeight,stageWidth,stageHeight,objectFit){
@@ -978,11 +1199,16 @@ function confirmNewFace(detection,now,updatedCandidates){
     id,name:'Unknown Person '+(unknownCounter++),
     role:'Detected by AI - Tap to name',story:'',
     color:['#d0d0d0','#a0a0a0','#777777','#c0c0c0','#8a8a8a'][chars.length%5],
-    x:detection.x,y:detection.y,w:detection.w*1.4,h:detection.h*1.4,
+    x:detection.x,y:detection.y,w:detection.w,h:detection.h,
     type:'face',isUnknown:true,faceDescriptors:Array.isArray(detection.descriptor)?[detection.descriptor]:[]
   };
   chars.push(character);
-  detectionTracks.set(id,{x:detection.x,y:detection.y,vx:0,vy:0,lastSeen:now});
+  detectionTracks.set(id,{
+    x:detection.x,y:detection.y,w:detection.w,h:detection.h,
+    smoothX:detection.x,smoothY:detection.y,smoothW:detection.w,smoothH:detection.h,
+    derivativeX:0,derivativeY:0,derivativeW:0,derivativeH:0,
+    vx:0,vy:0,lastSeen:now
+  });
   recordCharacterMoment(id,candidate.firstTime,candidate.firstX,candidate.firstY,candidate.firstW,candidate.firstH);
   recordCharacterMoment(id,video.currentTime,detection.x,detection.y,detection.w,detection.h);
   return character;
@@ -998,20 +1224,54 @@ function getRecentTrackMatch(detection,now,excludedIds){
     .filter(c=>!excludedIds.has(c.id))
     .map(c=>{
       const track=detectionTracks.get(c.id);
-      if(!track || now-track.lastSeen>2500) return null;
-      const elapsed=Math.min((now-track.lastSeen)/1000,0.8);
+      if(!track || now-track.lastSeen>RECENT_TRACK_WINDOW_MS) return null;
+      const elapsed=Math.min((now-track.lastSeen)/1000,1.5);
       const predictedX=track.x+track.vx*elapsed;
       const predictedY=track.y+track.vy*elapsed;
       const distance=Math.hypot(predictedX-detection.x,predictedY-detection.y);
       const appearanceDistance=bestFaceDescriptorDistance(c,detection.descriptor);
-      const gate=Math.min(12,Math.max(5,Math.max(detection.w,detection.h)*1.4));
-      if(distance>gate||appearanceDistance>TRACK_APPEARANCE_THRESHOLD) return null;
-      return {character:c,track,distance,appearanceDistance,score:distance/gate+appearanceDistance/TRACK_APPEARANCE_THRESHOLD};
+      const gate=Math.min(18,Math.max(7,Math.max(detection.w,detection.h)*1.8));
+      if(distance>gate||appearanceDistance>0.9) return null;
+      return {
+        character:c,track,distance,appearanceDistance,
+        score:distance/gate+Math.min(appearanceDistance,1)*0.45
+      };
     })
     .filter(Boolean)
     .sort((a,b)=>a.score-b.score);
   if(candidates.length>1&&candidates[1].score-candidates[0].score<0.18) return null;
   return candidates[0]||null;
+}
+
+function getLockedTrackAssignments(detections,now){
+  const candidates=[];
+  for(const character of chars){
+    if(!character.trackingLocked) continue;
+    const track=detectionTracks.get(character.id);
+    if(!track||now-track.lastSeen>RECENT_TRACK_WINDOW_MS) continue;
+    const elapsed=Math.min((now-track.lastSeen)/1000,1.5);
+    const predictedX=track.smoothX+track.vx*elapsed;
+    const predictedY=track.smoothY+track.vy*elapsed;
+    detections.forEach((detection,index)=>{
+      const distance=Math.hypot(predictedX-detection.x,predictedY-detection.y);
+      const gate=Math.min(12,Math.max(3.5,Math.max(detection.w,detection.h)*1.6));
+      if(distance>gate) return;
+      const appearanceDistance=bestFaceDescriptorDistance(character,detection.descriptor);
+      candidates.push({
+        index,character,distance,
+        score:distance/gate+Math.min(appearanceDistance,1)*0.35
+      });
+    });
+  }
+  candidates.sort((a,b)=>a.score-b.score);
+  const assignments=new Map();
+  const usedCharacterIds=new Set();
+  for(const candidate of candidates){
+    if(assignments.has(candidate.index)||usedCharacterIds.has(candidate.character.id)) continue;
+    assignments.set(candidate.index,candidate.character);
+    usedCharacterIds.add(candidate.character.id);
+  }
+  return assignments;
 }
 
 function getTimelineMomentMatch(detection,time,excludedIds){
@@ -1074,12 +1334,8 @@ async function startDetection(){
     detectionRunning=true;
     const generation=detectionGeneration;
     try{
-      let minimumScore=0.35;
-      let detections=await detectFaces(new faceapi.TinyFaceDetectorOptions({inputSize:640,scoreThreshold:minimumScore}));
-      if(!detections.length){
-        minimumScore=0.25;
-        detections=await detectFaces(new faceapi.TinyFaceDetectorOptions({inputSize:768,scoreThreshold:minimumScore}));
-      }
+      const detailedThreshold=0.18;
+      const detections=await detectFaces(performance.now());
       if(generation!==detectionGeneration || !aiOn || video.paused || video.ended || mode!=='main') return;
       const vw=video.videoWidth, vh=video.videoHeight;
       const stage=document.getElementById('stage');
@@ -1090,7 +1346,7 @@ async function startDetection(){
       const found=[];
       detections.forEach(result=>{
         const detection=getDetectionData(result);
-        if(!detection||detection.score<minimumScore) return;
+        if(!detection||detection.score<detailedThreshold) return;
         const box=mapDetectionBoxToStage(
           detection.box,vw,vh,stageWidth,stageHeight,objectFit
         );
@@ -1105,21 +1361,36 @@ async function startDetection(){
         });
       });
       found.sort((a,b)=>b.score-a.score);
+      const lockedAssignments=getLockedTrackAssignments(found,now);
       let newFaces=[];
-      let usedIds=new Set();
+      let usedIds=new Set(chars.filter(character=>character.trackingLocked).map(character=>character.id));
       const updatedCandidates=new Set();
       found.forEach((detection,i)=>{
         const {x,y,w,h,descriptor}=detection;
-        const identityMatch=getFaceDescriptorMatch(descriptor,usedIds);
-        const match=identityMatch||getRecentTrackMatch(detection,now,usedIds)||getTimelineMomentMatch(detection,video.currentTime,usedIds)||getLegacyPositionMatch(x,y,usedIds);
+        const lockedCharacter=lockedAssignments.get(i);
+        const recentTrackMatch=lockedCharacter?{character:lockedCharacter}:getRecentTrackMatch(detection,now,usedIds);
+        const identityMatch=recentTrackMatch?null:getFaceDescriptorMatch(descriptor,usedIds);
+        const match=recentTrackMatch||identityMatch||getTimelineMomentMatch(detection,video.currentTime,usedIds)||getLegacyPositionMatch(x,y,usedIds);
         if(match){
           const c=match.character;
           const previous=detectionTracks.get(c.id);
-          const elapsed=previous?Math.max((now-previous.lastSeen)/1000,0.1):1;
+          const elapsed=previous?Math.max((now-previous.lastSeen)/1000,0.016):0.12;
           const vx=previous?(x-previous.x)/elapsed:0;
           const vy=previous?(y-previous.y)/elapsed:0;
-          c.x=x; c.y=y; c.w=w*1.4; c.h=h*1.4;
-          detectionTracks.set(c.id,{x,y,vx:previous?previous.vx*0.35+vx*0.65:0,vy:previous?previous.vy*0.35+vy*0.65:0,lastSeen:now});
+          const smooth=smoothDetectionBox(previous,detection,elapsed);
+          c.x=smooth.x;
+          c.y=smooth.y;
+          c.w=smooth.w;
+          c.h=smooth.h;
+          detectionTracks.set(c.id,{
+            x,y,w,h,
+            smoothX:smooth.x,smoothY:smooth.y,smoothW:smooth.w,smoothH:smooth.h,
+            derivativeX:smooth.derivativeX,derivativeY:smooth.derivativeY,
+            derivativeW:smooth.derivativeW,derivativeH:smooth.derivativeH,
+            vx:previous?previous.vx*0.35+smooth.derivativeX*0.65:vx,
+            vy:previous?previous.vy*0.35+smooth.derivativeY*0.65:vy,
+            lastSeen:now
+          });
           if(Array.isArray(descriptor)){
             const templateDistance=Math.min(...(c.faceDescriptors||[]).map(template=>descriptorDistance(descriptor,template)));
             if(!Number.isFinite(templateDistance)||templateDistance<=0.48) rememberFaceDescriptor(c,descriptor);
@@ -1135,15 +1406,18 @@ async function startDetection(){
           }
         }
       });
-      activeDetectionIds=new Set(newFaces.map(c=>c.id));
+      const nextActiveDetectionIds=new Set(newFaces.map(c=>c.id));
       for(const character of chars){
         const track=detectionTracks.get(character.id);
-        if(!track||now-track.lastSeen>DETECTION_LOCK_GRACE_MS||activeDetectionIds.has(character.id)) continue;
-        const elapsed=Math.min((now-track.lastSeen)/1000,0.75);
-        character.x=Math.max(0,Math.min(100,track.x+track.vx*elapsed));
-        character.y=Math.max(0,Math.min(100,track.y+track.vy*elapsed));
-        activeDetectionIds.add(character.id);
+        if(!track||now-track.lastSeen>DETECTION_LOCK_GRACE_MS||nextActiveDetectionIds.has(character.id)) continue;
+        const elapsed=Math.min((now-track.lastSeen)/1000,1.5);
+        const coastTime=0.25*(1-Math.exp(-elapsed/0.25));
+        character.x=Math.max(0,Math.min(100,track.smoothX+track.vx*coastTime));
+        character.y=Math.max(0,Math.min(100,track.smoothY+track.vy*coastTime));
+        nextActiveDetectionIds.add(character.id);
       }
+      if(chars.some(character=>character.id===currentChar)) nextActiveDetectionIds.add(currentChar);
+      activeDetectionIds=nextActiveDetectionIds;
       renderChars();
       if(newFaces.length>0) saveToStorage();
       document.getElementById('faceCount').innerText=found.length+' faces • '+chars.length+' people';
@@ -1153,7 +1427,7 @@ async function startDetection(){
       console.error('Face detection failed',error);
     }
     finally{ detectionRunning=false; }
-  }, 800);
+  },DETECTION_INTERVAL_MS);
 }
 
 function toggleAI(){
@@ -1167,23 +1441,69 @@ function toggleAI(){
 }
 
 function renderChars(){
+  updateWatchButton();
   if(!document.body.classList.contains('creator-mode')) return;
   if(document.body.classList.contains('public-view')) return;
   let layer=document.getElementById('faceLayer');
-  layer.innerHTML=chars.filter(c=>activeDetectionIds.has(c.id)).map(c=>{
-    const name=escapeHtml(c.name);
+  const visibleCharacters=chars.filter(c=>mode!=='bone'&&(activeDetectionIds.has(c.id)||c.id===currentChar));
+  const visibleIds=new Set(visibleCharacters.map(character=>character.id));
+  for(const [id,node] of faceBoxNodes){
+    if(!visibleIds.has(id)){
+      node.remove();
+      faceBoxNodes.delete(id);
+    }
+  }
+  for(const c of visibleCharacters){
     const color=typeof c.color==='string'&&/^#[0-9a-f]{6}$/i.test(c.color)?c.color:'#bdbdbd';
     const x=Number.isFinite(Number(c.x))?Number(c.x):50;
     const y=Number.isFinite(Number(c.y))?Number(c.y):50;
     const initials=escapeHtml(c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?');
-    let isUnknown=c.isUnknown?'unknown':'';
-    let isBody=c.type==='body'?'body':'';
-    // Face box size - bigger for body
-    let w=Number.isFinite(Number(c.w))?Math.max(1,Math.min(100,Number(c.w))):18;
-    let h=Number.isFinite(Number(c.h))?Math.max(1,Math.min(100,Number(c.h))):22;
+    const isLocked=c.id===currentChar;
+    const minWidth=layer.clientWidth?Math.max(0.35,6/layer.clientWidth*100):0.5;
+    const minHeight=layer.clientHeight?Math.max(0.35,6/layer.clientHeight*100):0.5;
+    let w=Number.isFinite(Number(c.w))?Math.max(minWidth,Math.min(100,Number(c.w))):18;
+    let h=Number.isFinite(Number(c.h))?Math.max(minHeight,Math.min(100,Number(c.h))):22;
     if(c.type==='body'){ w=Math.max(w,22); h=Math.max(h,40); }
-    return `<div class="face-box ${isUnknown} ${isBody}" data-char-id="${c.id}" tabindex="0" aria-label="Select ${name} to add or edit their details" style="left:${x}%;top:${y}%;width:${w}%;height:${h}%;background:${color}22;border-color:${color}" onclick="selectDetectedPerson('${c.id}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectDetectedPerson('${c.id}',event)}"><span class="tag" style="background:${color}"><svg class="icon"><use href="#icon-user"/></svg> ${name}</span><div style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:2px 6px;border-radius:10px;font-size:9px">${initials} · EDIT</div></div>`;
-  }).join('');
+    let node=faceBoxNodes.get(c.id);
+    if(!node){
+      node=document.createElement('div');
+      node.className='face-box';
+      node.tabIndex=0;
+      node.innerHTML='<span class="tag"><svg class="icon"><use href="#icon-user"/></svg> <span class="face-name"></span></span><div class="face-initials" style="position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:2px 6px;border-radius:10px;font-size:9px"></div>';
+      node.addEventListener('click',event=>selectDetectedPerson(c.id,event));
+      node.addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){
+          event.preventDefault();
+          selectDetectedPerson(c.id,event);
+        }
+      });
+      faceBoxNodes.set(c.id,node);
+      layer.appendChild(node);
+    }
+    node.className=`face-box ${c.isUnknown?'unknown':''} ${c.type==='body'?'body':''} ${c.trackingLocked?'identity-locked':''} ${isLocked?'locked':''}`;
+    node.dataset.charId=c.id;
+    node.setAttribute('aria-label',c.trackingLocked
+      ?`Tracking locked to ${c.name}. ${isLocked?'Currently selected for editing.':'Select to edit.'}`
+      :`Select ${c.name} to add or edit their details.`);
+    node.title=c.trackingLocked?`Tracking locked to ${c.name}`:`Select ${c.name}`;
+    node.style.left=`${x}%`;
+    node.style.top=`${y}%`;
+    node.style.width=`${w}%`;
+    node.style.height=`${h}%`;
+    if(c.type!=='body'){
+      const boxPixelSize=Math.min(w*layer.clientWidth/100,h*layer.clientHeight/100);
+      node.style.borderWidth=`${Math.max(1,Math.min(3,boxPixelSize*0.12))}px`;
+    }
+    node.style.backgroundColor=`${color}22`;
+    node.style.borderColor=color;
+    const tag=node.querySelector('.tag');
+    tag.style.backgroundColor=color;
+    const faceName=node.querySelector('.face-name');
+    if(faceName.textContent!==c.name) faceName.textContent=c.name;
+    const initialsLabel=node.querySelector('.face-initials');
+    const initialsText=`${initials} · EDIT`;
+    if(initialsLabel.textContent!==initialsText) initialsLabel.textContent=initialsText;
+  }
   document.getElementById('charCount').innerText=chars.length;
   let list=document.getElementById('charList');
   if(chars.length===0) list.innerHTML='<p style="color:#a8c8d8">No people detected yet.</p>';
@@ -1196,7 +1516,7 @@ function renderChars(){
     const movieLabel=characterBoneMovies.has(c.id)
       ?` · ${movieSource==='ai'?'AI Bone Movie':'Local Bone Movie'} ready`
       :'';
-    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · ${c.type==='body'?'Full body':'Face'} · View story${movieLabel}</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span></div>`;
+    return `<div class="char-row ${currentChar===c.id && mode==='bone'?'active':''}" onclick="enterBone('${c.id}', event)"><div class="avatar" style="background:${color}">${initials}</div><div class="char-row-details"><b>${name} ${c.isUnknown?'(Unknown)':''}</b><br><small style="color:#a8a8a8">${role} · ${c.type==='body'?'Full body':'Face'} · View story${movieLabel}</small></div><span class="row-arrow"><svg class="icon"><use href="#icon-play"/></svg></span><button type="button" class="clear-person-btn" aria-label="Clear ${name} record" title="Clear this detected person and saved details" onclick="clearCharacterRecord('${c.id}',event)"><svg class="icon"><use href="#icon-trash"/></svg></button></div>`;
   }).join('');
 }
 
@@ -1244,7 +1564,13 @@ function selectDetectedPerson(id,event){
   if(event) event.stopPropagation();
   const character=chars.find(item=>item.id===id);
   if(!character) return;
+  if(savedCharacterMovieIds.has(id)&&characterBoneMovies.has(id)){
+    enterBone(id,event);
+    return;
+  }
   currentChar=id;
+  activeDetectionIds.add(id);
+  updateWatchButton();
   editingId=id;
   video.pause();
   document.getElementById('fName').value=character.isUnknown?'':character.name;
@@ -1254,10 +1580,12 @@ function selectDetectedPerson(id,event){
   document.getElementById('fType').value=character.type;
   document.getElementById('formTitle').innerText=character.isUnknown?'Name this person':`Edit ${character.name}`;
   showSelectedFace(character);
+  document.getElementById('hint').innerText=`${character.name} is locked for editing. Click the highlighted box to reopen their details.`;
   const existingMovie=characterBoneMovies.get(id);
   if(existingMovie){
     clearStoryVideo();
-    const extension=showCharacterStoryVideo(id,existingMovie,character);
+    const movieSource=characterBoneMovieDetails.get(id)?.source||'local';
+    const extension=showCharacterStoryVideo(id,existingMovie,character,movieSource,false);
     document.getElementById('storyVideoStatus').innerText=`Saved Bone Movie ready (${extension.toUpperCase()}).`;
   }else{
     clearStoryVideo();
@@ -1279,8 +1607,10 @@ function saveCharacter(){
   };
   const movieDetails=characterBoneMovieDetails.get(c.id);
   const movieMatchesCharacter=movieDetails&&Object.keys(updatedCharacter).every(key=>movieDetails[key]===updatedCharacter[key]);
-  Object.assign(c,updatedCharacter,{price:0,isUnknown:false});
+  Object.assign(c,updatedCharacter,{price:0,isUnknown:false,trackingLocked:true});
+  currentChar=c.id;
   if(!movieMatchesCharacter){
+    savedCharacterMovieIds.delete(c.id);
     characterBoneMovies.delete(c.id);
     characterBoneMovieDetails.delete(c.id);
     if(movieDetails){
@@ -1288,10 +1618,131 @@ function saveCharacter(){
       clearCreatorBoneMovie();
       document.getElementById('storyVideoStatus').innerText='Character details changed. Generate a new Bone Movie to match the updated story.';
     }
+  }else{
+    savedCharacterMovieIds.add(c.id);
   }
-  saveToStorage(); renderChars();
+  const persisted=saveToStorage();
+  renderChars();
   document.getElementById('formTitle').innerText='Saved '+c.name;
   document.getElementById('selectedFaceName').innerText=c.name;
+  updateWatchButton();
+  const message=!persisted
+    ?`Could not save ${c.name}'s character story to this browser. The changes are only available for this session.`
+    :movieMatchesCharacter
+      ?`Successfully saved ${c.name}'s character story. Watch is ready to play the linked Bone Movie.`
+      :`Successfully saved ${c.name}'s character story. Generate a Bone Movie to enable Watch for this character.`;
+  document.getElementById('publishStatus').innerText=message;
+  document.getElementById('watchBtn').scrollIntoView({behavior:'auto',block:'center'});
+  window.alert(message);
+}
+
+async function clearCharacterRecord(id,event){
+  if(event) event.stopPropagation();
+  const character=chars.find(item=>item.id===id);
+  if(!character) return;
+  const previousName=character.name;
+  if(!window.confirm(`Clear ${character.name}'s saved details and Bone Movie? The detected face will remain in the list.`)) return;
+  if(boneMovieActive&&currentChar===id){
+    try{await restoreMainVideoFromBone(false);}
+    catch(error){
+      console.error('Could not restore the main video before clearing this character',error);
+      window.alert(`Could not clear ${character.name}: ${error.message}`);
+      return;
+    }
+    mode='main';
+    document.getElementById('boneOverlay').classList.remove('show');
+    document.getElementById('backBtn').style.display='none';
+    document.getElementById('modeLabel').className='label';
+    document.getElementById('modeLabel').innerText='● MAIN BONE — '+formatTime(boneReturnTime);
+  }
+  character.name=`Unknown Person ${unknownCounter++}`;
+  character.role='Detected by AI - Tap to name';
+  character.story='';
+  character.color='#bdbdbd';
+  character.isUnknown=true;
+  character.trackingLocked=false;
+  characterBoneMovies.delete(id);
+  characterBoneMovieDetails.delete(id);
+  savedCharacterMovieIds.delete(id);
+  if(lastGeneratedCharacterId===id){
+    lastGeneratedCharacterId=null;
+    clearStoryVideo();
+  }
+  if(currentChar===id){
+    if(mode==='bone'){
+      mode='main';
+      document.getElementById('boneOverlay').classList.remove('show');
+      document.getElementById('backBtn').style.display='none';
+      document.getElementById('modeLabel').className='label';
+      document.getElementById('modeLabel').innerText='● MAIN BONE — '+formatTime(boneReturnTime);
+    }
+    document.getElementById('fName').value='';
+    document.getElementById('fRole').value=character.role;
+    document.getElementById('fStory').value='';
+    document.getElementById('fColor').value=character.color;
+    document.getElementById('fType').value=character.type;
+    document.getElementById('formTitle').innerText='Name this person';
+    if(video.readyState>=HTMLMediaElement.HAVE_CURRENT_DATA) showSelectedFace(character);
+    clearStoryVideo();
+  }
+  const persisted=saveToStorage();
+  renderChars();
+  document.getElementById('publishStatus').innerText=persisted
+    ?`Cleared saved details and Bone Movie for ${previousName}. The detected face remains available.`
+    :`Cleared ${previousName}'s details and movie for this session, but could not save the change in this browser.`;
+}
+
+function clearSelectedCharacterDetails(){
+  if(!currentChar){
+    window.alert('Select a detected person first. This clears their details and Bone Movie but keeps the detected face.');
+    return;
+  }
+  clearCharacterRecord(currentChar);
+}
+
+async function clearAllPeople(){
+  if(!window.confirm('Clear every detected face, saved character record, and Bone Movie?')) return;
+  if(boneMovieActive){
+    try{await restoreMainVideoFromBone(false);}
+    catch(error){
+      console.error('Could not restore the main video before clearing all people',error);
+      window.alert(`Could not clear detected people: ${error.message}`);
+      return;
+    }
+  }
+  detectionGeneration++;
+  chars=[];
+  savedCharacterMovieIds.clear();
+  detectionTracks.clear();
+  characterMoments.clear();
+  pendingDetectionCandidates=[];
+  characterBoneMovies.clear();
+  characterBoneMovieDetails.clear();
+  clearCreatorBoneMovie();
+  lastGeneratedCharacterId=null;
+  currentChar=null;
+  editingId=null;
+  activeDetectionIds.clear();
+  unknownCounter=1;
+  aiOn=false;
+  const aiButton=document.getElementById('aiBtn');
+  aiButton.innerHTML='<svg class="icon"><use href="#icon-scan"/></svg> AI detection: OFF';
+  aiButton.className='creator-only ghost';
+  document.getElementById('aiStatus').innerText='AI OFF - Manual';
+  document.getElementById('fName').value='';
+  document.getElementById('fRole').value='';
+  document.getElementById('fStory').value='';
+  document.getElementById('backBtn').style.display='none';
+  document.getElementById('modeLabel').className='label';
+  document.getElementById('modeLabel').innerText='● MAIN BONE';
+  document.getElementById('formTitle').innerHTML='<svg class="icon"><use href="#icon-plus"/></svg> Person details';
+  document.getElementById('selectedFacePreview').hidden=true;
+  document.getElementById('selectedFaceImage').removeAttribute('src');
+  document.getElementById('boneOverlay').classList.remove('show');
+  clearStoryVideo();
+  mode='main';
+  saveToStorage();
+  renderChars();
 }
 
 function clearCreatorBoneMovie(){
@@ -1309,32 +1760,48 @@ async function enterBone(id, e){
   let c=chars.find(ch=>ch.id===id); if(!c) return;
   clearStoryVideo();
   clearCreatorBoneMovie();
-  currentChar=id; mode='bone'; savedTime=video.currentTime||0;
+  const movie=characterBoneMovies.get(id);
+  if(!boneMovieActive){
+    savedTime=video.currentTime||0;
+    boneReturnTime=savedTime;
+    boneReturnSource=video.currentSrc||video.src;
+  }else if(!movie){
+    try{await restoreMainVideoFromBone(false);}
+    catch(error){
+      console.error('Could not restore the original video before opening a character story',error);
+      document.getElementById('hint').innerText=error.message;
+      return;
+    }
+  }
+  currentChar=id; mode='bone';
   video.pause();
-  document.getElementById('boneOverlay').classList.add('show');
+  document.getElementById('boneOverlay').classList.toggle('show',!movie);
   document.getElementById('boneAvatar').innerText=c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('boneAvatar').style.background=c.color;
   document.getElementById('boneName').innerText=c.isUnknown? 'Who is this? — '+c.name : c.name+' — Story Bone';
   document.getElementById('boneStory').innerText=c.story || 'No Bone story yet. This person was detected by AI. Add their story below and Save — then next time anyone clicks them, they will see it.';
-  const movie=characterBoneMovies.get(id);
   const movieSource=characterBoneMovieDetails.get(id)?.source;
-  const moviePlayer=document.getElementById('creatorBoneVideo');
   const movieStatus=document.getElementById('creatorBoneVideoStatus');
   if(movie){
-    creatorBoneMovieUrl=URL.createObjectURL(movie);
-    moviePlayer.src=creatorBoneMovieUrl;
-    moviePlayer.style.display='block';
+    if(mainBoneMovieUrl) URL.revokeObjectURL(mainBoneMovieUrl);
+    mainBoneMovieUrl=URL.createObjectURL(movie);
+    boneMovieActive=true;
+    video.src=mainBoneMovieUrl;
+    video.load();
+    document.getElementById('faceLayer').innerHTML='';
     movieStatus.innerText=movieSource==='ai'
-      ?'AI Bone Movie generated from this character’s story.'
-      :'Local highlight generated from this character’s detected moments.';
-    try{await moviePlayer.play();}
+      ?'Playing the AI Bone Movie generated from this character’s story in the main player.'
+      :'Playing the local character highlight in the main player.';
+    document.getElementById('hint').innerText=`Playing ${c.name}'s Bone Movie`;
+    try{await video.play();}
     catch(error){
       movieStatus.innerText=error.name==='NotAllowedError'
-        ?'Press play to watch this character’s Bone Movie.'
-        :'The Bone Movie could not start. Use the video controls to retry.';
-      console.warn('Creator Bone Movie playback failed',error);
+        ?'Press play on the main player to watch this character’s Bone Movie.'
+        :'The Bone Movie could not start. Use the main player controls to retry.';
+      console.warn('Character Bone Movie playback failed in the main player',error);
     }
   }else{
+    document.getElementById('boneOverlay').classList.add('show');
     movieStatus.innerText='No Bone Movie has been generated for this character yet.';
   }
   document.getElementById('boneMeta').innerText=(c.role||'')+' • '+c.type+' • Branched at Main '+formatTime(savedTime)+' • Will blend back to same second';
@@ -1360,11 +1827,30 @@ function waitForSeek(time){
   });
 }
 
-function drawStoryFrame(ctx,width,height,character,momentIndex,totalMoments,activitySummary){
+function drawStoryFrame(ctx,width,height,character,momentIndex,totalMoments,activitySummary,moment){
   const sourceWidth=video.videoWidth, sourceHeight=video.videoHeight;
-  const scale=Math.max(width/sourceWidth,height/sourceHeight);
-  const cropWidth=width/scale, cropHeight=height/scale;
-  ctx.drawImage(video,(sourceWidth-cropWidth)/2,(sourceHeight-cropHeight)/2,cropWidth,cropHeight,0,0,width,height);
+  const stage=document.getElementById('stage');
+  const stageWidth=stage.clientWidth,stageHeight=stage.clientHeight;
+  const objectFit=getComputedStyle(video).objectFit;
+  const scale=objectFit==='contain'
+    ?Math.min(stageWidth/sourceWidth,stageHeight/sourceHeight)
+    :Math.max(stageWidth/sourceWidth,stageHeight/sourceHeight);
+  const offsetX=(stageWidth-sourceWidth*scale)/2;
+  const offsetY=(stageHeight-sourceHeight*scale)/2;
+  const centerX=moment?(moment.x/100*stageWidth-offsetX)/scale:sourceWidth/2;
+  const centerY=moment?(moment.y/100*stageHeight-offsetY)/scale:sourceHeight/2;
+  const boxWidth=moment?moment.w/100*stageWidth/scale:sourceWidth*0.25;
+  const boxHeight=moment?moment.h/100*stageHeight/scale:sourceHeight*0.25;
+  const frameAspect=width/height;
+  const cropWidth=Math.min(
+    sourceWidth,
+    sourceHeight*frameAspect,
+    Math.max(boxWidth*3.5,boxHeight*3.2*frameAspect)
+  );
+  const cropHeight=cropWidth/frameAspect;
+  const left=Math.max(0,Math.min(sourceWidth-cropWidth,centerX-cropWidth/2));
+  const top=Math.max(0,Math.min(sourceHeight-cropHeight,centerY-cropHeight/2));
+  ctx.drawImage(video,left,top,cropWidth,cropHeight,0,0,width,height);
   const gradient=ctx.createLinearGradient(0,height*0.52,0,height);
   gradient.addColorStop(0,'rgba(0,0,0,0)');
   gradient.addColorStop(1,'rgba(0,0,0,.88)');
@@ -1445,8 +1931,9 @@ async function captureFaceCrop(moment){
   }
 }
 
-function showCharacterStoryVideo(id,blob,characterDetails=chars.find(item=>item.id===id),source='local'){
+function showCharacterStoryVideo(id,blob,characterDetails=chars.find(item=>item.id===id),source='local',markUnsaved=true){
   characterBoneMovies.set(id,blob);
+  if(markUnsaved) savedCharacterMovieIds.delete(id);
   characterBoneMovieDetails.set(id,{
     name:characterDetails?.name||'',
     role:characterDetails?.role||'',
@@ -1577,8 +2064,8 @@ async function createCharacterStoryVideo(id){
         return;
       }catch(error){
         console.error('Hugging Face Bone Movie generation failed',error);
-        status.innerText=`Hugging Face could not generate this Bone Movie: ${error.message||'provider unavailable'}. No local substitute was created.`;
-        return;
+        localFallbackReason=`Hugging Face generation failed (${error.message||'provider unavailable'}); using a local highlight instead.`;
+        status.innerText=`Hugging Face could not generate the movie. ${localFallbackReason}`;
       }finally{
         if(Number.isFinite(originalTime)&&generation===detectionGeneration&&video.readyState>=1){
           try{await waitForSeek(Math.min(originalTime,video.duration));}
@@ -1614,11 +2101,11 @@ async function createCharacterStoryVideo(id){
   }
   const positions=selectedMoments.map(moment=>({x:moment.x,y:moment.y}));
   const moved=positions.some(point=>Math.hypot(point.x-positions[0].x,point.y-positions[0].y)>6);
-  const activitySummary=moved?'AI tracked the face at changing positions in the frame.':'AI matched repeated appearances of this face.';
+  const activitySummary=moved?'Camera reframes on this character across detected moments.':'Camera stays focused on this character across detected moments.';
   let stream=null, recorder=null, recordingError=null, drawFrameId=0, currentMomentIndex=0;
   const chunks=[];
   const draw=()=>{
-    try{drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,currentMomentIndex,clips.length,activitySummary);}
+    try{drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,currentMomentIndex,clips.length,activitySummary,selectedMoments[currentMomentIndex]);}
     catch(error){recordingError=error;return;}
     drawFrameId=requestAnimationFrame(draw);
   };
@@ -1630,7 +2117,7 @@ async function createCharacterStoryVideo(id){
     status.innerText=`Preparing ${clips.length} detected moment(s)...`;
     video.pause();
     await waitForSeek(clips[0].start);
-    drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,0,clips.length,activitySummary);
+    drawStoryFrame(context,canvas.width,canvas.height,movieCharacter,0,clips.length,activitySummary,selectedMoments[0]);
     stream=canvas.captureStream(24);
     recorder=new MediaRecorder(stream,{mimeType});
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
@@ -1736,7 +2223,17 @@ async function publishUniverse(){
     link.style.display='block';
     document.getElementById('copyShareLinkBtn').style.display='inline-block';
     publishedShareId=result.id;
-    status.innerText=`Published ${namedCharacters.length} character(s). Share this link with viewers.`;
+    updateWatchButton();
+    let watchShortcutSaved=true;
+    try{
+      localStorage.setItem('fishbone_last_published_share_id',result.id);
+    }catch(error){
+      console.warn('Could not save the last published FishBone link in this browser.',error);
+      watchShortcutSaved=false;
+    }
+    status.innerText=watchShortcutSaved
+      ?`Published ${namedCharacters.length} character(s). Use Watch to play it here, or share the link with viewers.`
+      :'Published, but this browser could not save the Watch shortcut. Copy the share link to watch later.';
   }catch(error){
     console.error('Publishing FishBone universe failed',error);
     status.innerText=`Could not publish: ${error.message||'backend unavailable'}`;
@@ -1848,13 +2345,17 @@ async function exportTikTokTeaser(){
 
 function blendBack(){
   if(mode!=='bone') return;
-  clearCreatorBoneMovie();
   document.getElementById('modeLabel').innerText='🔄 BLENDING BACK...';
   document.getElementById('modeLabel').className='label blend';
   document.getElementById('boneOverlay').classList.remove('show');
-  setTimeout(()=>{
+  setTimeout(async ()=>{
+    try{await restoreMainVideoFromBone(false);}
+    catch(error){
+      console.error('Could not restore the original video after playing a character movie',error);
+      document.getElementById('hint').innerText=error.message;
+    }
     mode='main'; currentChar=null;
-    video.currentTime=savedTime;
+    if(!boneMovieActive&&Number.isFinite(video.duration)) video.currentTime=Math.min(savedTime,video.duration);
     requestMainVideoPlayback();
     document.getElementById('modeLabel').innerText='● MAIN BONE — '+formatTime(savedTime);
     document.getElementById('modeLabel').className='label';
@@ -1936,46 +2437,11 @@ video.addEventListener('timeupdate', ()=>{
   document.getElementById('timeText').innerText=formatTime(video.currentTime)+' / '+formatTime(video.duration);
   if(mode==='main') document.getElementById('modeLabel').innerText='● MAIN BONE — '+formatTime(video.currentTime);
 });
-function clearChars(){
-  if(!confirm('Clear all?')) return;
-  detectionGeneration++;
-  chars=[];
-  detectionTracks.clear();
-  characterMoments.clear();
-  pendingDetectionCandidates=[];
-  characterBoneMovies.clear();
-  characterBoneMovieDetails.clear();
-  clearCreatorBoneMovie();
-  lastGeneratedCharacterId=null;
-  currentChar=null;
-  editingId=null;
-  activeDetectionIds.clear();
-  unknownCounter=1;
-  aiOn=false;
-  const aiButton=document.getElementById('aiBtn');
-  aiButton.innerHTML='<svg class="icon"><use href="#icon-scan"/></svg> AI detection: OFF';
-  aiButton.className='creator-only ghost';
-  document.getElementById('aiStatus').innerText='AI OFF - Manual';
-  document.getElementById('fName').value='';
-  document.getElementById('fRole').value='';
-  document.getElementById('fStory').value='';
-  document.getElementById('backBtn').style.display='none';
-  document.getElementById('modeLabel').className='label';
-  document.getElementById('modeLabel').innerText='● MAIN BONE';
-  document.getElementById('formTitle').innerHTML='<svg class="icon"><use href="#icon-plus"/></svg> Person details';
-  document.getElementById('selectedFacePreview').hidden=true;
-  document.getElementById('selectedFaceImage').removeAttribute('src');
-  document.getElementById('boneOverlay').classList.remove('show');
-  clearStoryVideo();
-  mode='main';
-  saveToStorage();
-  renderChars();
-}
-
 checkBackend();
 checkGenerationConfig();
+updateWatchButton();
 const shareId=new URLSearchParams(location.search).get('share');
-if(shareId) loadPublicShare(shareId);
+if(shareId) loadPublicShare(shareId,false,new URLSearchParams(location.search).get('watch')==='1');
 else setCreatorMode(true);
 </script>
 </body>
