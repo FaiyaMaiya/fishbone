@@ -25,7 +25,7 @@ The billable generation endpoint only accepts loopback requests by default. Do n
 
 For production, use HTTPS and configure a persistent volume. Do not commit `.env` or the published `data` directory.
 
-When the frontend and API are on different hosts, define `window.FISHBONE_API_BASE` before the app script loads (for example, in the hosting platform's frontend configuration) to the API's HTTPS origin. The share links use the current frontend URL and a public share ID.
+The frontend uses `https://fishbone-backend.onrender.com` for API requests when deployed, and `http://localhost:8000` during local development. If the API is hosted elsewhere, define `window.FISHBONE_API_BASE` before the app script loads to the API's HTTPS origin. The backend CORS policy allows the deployed frontends at `https://fishbone-frontend.onrender.com` and `https://fishbone-mwdb.onrender.com`, as well as the local Vite development origins. The share links use the current frontend URL and a public share ID.
 
 Creator tools and publishing do not require a login. Anyone who can reach the API can publish videos; configure network access accordingly. Published source videos and Bone Movies are publicly accessible to anyone with the share link.
 

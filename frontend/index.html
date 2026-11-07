@@ -398,7 +398,7 @@ try{
 let aiOn=true, aiReady=false, faceIdentityReady=false, aiModelLoadPromise=null, hfGenerationAvailable=false, mode='main', savedTime=0, currentChar=null, editingId=null, detectInterval=null, unknownCounter=1, lastGeneratedCharacterId=null;
 let detectionTracks=new Map(), characterMoments=new Map(), characterBoneMovies=new Map(), universeDotNodes=new Map(), activeDetectionIds=new Set(), revealedDetectionIds=new Set(), pendingTapActivationIds=new Set(), pendingDetectionCandidates=[], publicUnlockedCharacterIds=new Set(), detectionRunning=false, detectionGeneration=0, storyVideoUrl=null, teaserVideoUrl=null, sourceFile=null, localVideoUrl=null, publicShare=null, publicSourceWasPlaying=false, activePublicCharacterId=null, publishedShareId=null;
 let video=document.getElementById('video');
-const API_BASE=(window.FISHBONE_API_BASE||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'http://localhost:8000':'')).replace(/\/$/,'');
+const API_BASE=(window.FISHBONE_API_BASE||(location.hostname==='localhost'||location.hostname==='127.0.0.1'?'http://localhost:8000':'https://fishbone-backend.onrender.com')).replace(/\/$/,'');
 const FACE_MATCH_THRESHOLD=0.6;
 const TRACK_APPEARANCE_THRESHOLD=0.72;
 const MAX_FACE_TEMPLATES=5;
